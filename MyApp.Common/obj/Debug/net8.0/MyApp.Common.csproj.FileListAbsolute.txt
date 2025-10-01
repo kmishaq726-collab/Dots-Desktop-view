@@ -1,0 +1,11 @@
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\bin\Debug\net8.0\MyApp.Common.deps.json
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\bin\Debug\net8.0\MyApp.Common.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\bin\Debug\net8.0\MyApp.Common.pdb
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.GeneratedMSBuildEditorConfig.editorconfig
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.AssemblyInfoInputs.cache
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.AssemblyInfo.cs
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.csproj.CoreCompileInputs.cache
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\refint\MyApp.Common.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.pdb
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\ref\MyApp.Common.dll

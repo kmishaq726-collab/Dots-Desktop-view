@@ -1,0 +1,15 @@
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\bin\Debug\net8.0\MyApp.Engine.deps.json
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\bin\Debug\net8.0\MyApp.Engine.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\bin\Debug\net8.0\MyApp.Engine.pdb
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\bin\Debug\net8.0\MyApp.Common.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\bin\Debug\net8.0\MyApp.Common.pdb
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.csproj.AssemblyReference.cache
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.GeneratedMSBuildEditorConfig.editorconfig
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.AssemblyInfoInputs.cache
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.AssemblyInfo.cs
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.csproj.CoreCompileInputs.cache
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.En.1EBBB922.Up2Date
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\refint\MyApp.Engine.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.pdb
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\ref\MyApp.Engine.dll
