@@ -70,7 +70,7 @@ namespace MyApp.UI.Forms
                 Dock = DockStyle.Top,
                 Height = 60,
                 Padding = new Padding(10),
-                FlowDirection = FlowDirection.LeftToRight,
+                FlowDirection = FlowDirection.RightToLeft,
                 BackColor = Color.WhiteSmoke,
                 AutoSize = true,
                 WrapContents = false
