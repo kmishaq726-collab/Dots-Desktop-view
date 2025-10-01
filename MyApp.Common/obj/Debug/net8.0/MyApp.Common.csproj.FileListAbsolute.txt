@@ -9,3 +9,15 @@ D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.dll
 D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\refint\MyApp.Common.dll
 D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\MyApp.Common.pdb
 D:\Dot-Desktop-View\DotDesktopApp\MyApp.Common\obj\Debug\net8.0\ref\MyApp.Common.dll
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\bin\Debug\net8.0\MyApp.Common.deps.json
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\bin\Debug\net8.0\MyApp.Common.dll
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\bin\Debug\net8.0\MyApp.Common.pdb
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\MyApp.Common.GeneratedMSBuildEditorConfig.editorconfig
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\MyApp.Common.AssemblyInfoInputs.cache
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\MyApp.Common.AssemblyInfo.cs
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\MyApp.Common.csproj.CoreCompileInputs.cache
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\MyApp.Common.sourcelink.json
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\MyApp.Common.dll
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\refint\MyApp.Common.dll
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\MyApp.Common.pdb
+D:\work\github\dots\Dots-Desktop-view\MyApp.Common\obj\Debug\net8.0\ref\MyApp.Common.dll

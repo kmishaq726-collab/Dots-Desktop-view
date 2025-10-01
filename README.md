@@ -2,7 +2,7 @@
 
 This solution follows a **multi-layer architecture** to keep things clean, testable, and scalable.
 
-## 📂 Solution Layout
+## Solution Layout
 
 ```
 MyApp.sln
@@ -18,7 +18,7 @@ MyApp.sln
 
 ---
 
-## 📝 Responsibilities
+## Responsibilities
 
 ### 1. MyApp.Common → Shared Models & Utilities
 - DTOs (Data Transfer Objects)
@@ -26,7 +26,7 @@ MyApp.sln
 - Interfaces (contracts)
 - Generic helpers/extensions
 
-👉 Rule: **No UI or API code here.**
+Rule: **No UI or API code here.**
 
 ---
 
@@ -35,7 +35,7 @@ MyApp.sln
 - Business rules
 - Implements contracts from Common
 
-👉 Rule: **No UI or API code here.**
+Rule: **No UI or API code here.**
 
 ---
 
@@ -46,7 +46,7 @@ MyApp.sln
 - Swagger (API documentation)
 - Maps domain models → API responses
 
-👉 Rule: Keep logic in Engine, **API only forwards requests**.
+Rule: Keep logic in Engine, **API only forwards requests**.
 
 ---
 
@@ -56,11 +56,11 @@ MyApp.sln
 - Program.cs (entry point)
 - Handles UI events → calls Engine or API
 
-👉 Rule: **No business logic here**. Only UI interaction.
+Rule: **No business logic here**. Only UI interaction.
 
 ---
 
-## ⚖️ Responsibilities Summary
+## Responsibilities Summary
 
 | Layer        | Handles                                    | Should NOT handle                    |
 |--------------|--------------------------------------------|--------------------------------------|
@@ -71,7 +71,7 @@ MyApp.sln
 
 ---
 
-## 🔄 Example Flow
+## Example Flow
 
 1. **UI**: User clicks a button → calls Engine service.
 2. **Engine**: Runs logic → returns result (using Common DTO).
@@ -83,7 +83,7 @@ If using **API**:
 
 ---
 
-## ✅ Benefits
+## Benefits
 - Clear separation of concerns
 - Easier to maintain & test
 - UI and API can evolve independently
