@@ -27,8 +27,9 @@ namespace MyApp.UI.Forms
         {
             // === Form ===
             this.Text = "Dashboard";
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.ClientSize = new Size(1000, 600);
+            this.WindowState = FormWindowState.Maximized;
+            //this.StartPosition = FormStartPosition.CenterScreen;
+            //this.ClientSize = new Size(1000, 600);
             this.BackColor = Color.White;
 
             // === Top Panel ===
@@ -236,7 +237,9 @@ namespace MyApp.UI.Forms
 
                 if (e.Location.X < buttonWidth)
                 {
-                    MessageBox.Show("Resume clicked for row " + e.RowIndex);
+                    var saleForm = new SaleScreenForm();
+                    this.Close();
+                    saleForm.ShowDialog();                    
                 }
                 else
                 {
