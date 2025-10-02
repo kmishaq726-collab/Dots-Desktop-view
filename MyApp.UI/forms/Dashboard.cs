@@ -18,6 +18,9 @@ namespace MyApp.UI.Forms
         private Guna2Button btnAdd = null!;
         private Guna2DataGridView dgvSessions = null!;
 
+        // === Added field for Logout Button ===
+        private Guna2Button btnLogout = null!;
+
         public Dashboard()
         {
             InitializeComponent();
@@ -28,42 +31,77 @@ namespace MyApp.UI.Forms
             // === Form ===
             this.Text = "Dashboard";
             this.WindowState = FormWindowState.Maximized;
-            //this.StartPosition = FormStartPosition.CenterScreen;
-            //this.ClientSize = new Size(1000, 600);
             this.BackColor = Color.White;
 
             // === Top Panel ===
             topPanel = new Guna2Panel
             {
                 Dock = DockStyle.Top,
-                Height = 60,
+                Height = 80,
                 FillColor = Color.FromArgb(72, 118, 255),
                 Padding = new Padding(15, 10, 15, 10),
                 ShadowDecoration = { Enabled = true, Depth = 6 }
             };
 
+            // Create container for labels (Stack them vertically)
+            var labelPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                AutoSize = true,
+                Width = 300
+            };
+
+            labelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F)); // 60% for Title
+            labelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
+
+            // Title Label
             lblTitle = new Label
             {
                 Text = "Sale Sessions",
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
-                Dock = DockStyle.Left,
-                BackColor = Color.FromArgb(72, 118, 255)
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(72, 118, 255),
+                TextAlign = ContentAlignment.BottomLeft
             };
 
+            // Cost Center Label (now below title)
             lblCostCenter = new Label
             {
                 Text = "Cost Center 001",
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = Color.White,
+                AutoSize = true,
                 Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleRight,
-                BackColor = Color.FromArgb(72, 118, 255)
+                BackColor = Color.FromArgb(72, 118, 255),
+                TextAlign = ContentAlignment.TopLeft
             };
 
-            topPanel.Controls.Add(lblTitle);
-            topPanel.Controls.Add(lblCostCenter);
+            // Add labels into labelPanel
+            labelPanel.Controls.Add(lblTitle, 0, 0);
+            labelPanel.Controls.Add(lblCostCenter, 0, 1);
+
+            // === Logout Button (Top Right Corner) ===
+            btnLogout = new Guna2Button
+            {
+                Text = "Logout",
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(72, 118, 255),
+                FillColor = Color.Red,
+                AutoSize = true,
+                Dock = DockStyle.Right,
+                BorderRadius = 8,
+                Margin = new Padding(5, 10, 5, 10)
+            };
+            btnLogout.Click += BtnLogout_Click;
+
+            // Add to topPanel
+            topPanel.Controls.Add(btnLogout);
+            topPanel.Controls.Add(labelPanel);
 
             // === Action Panel ===
             actionPanel = new FlowLayoutPanel
@@ -161,7 +199,6 @@ namespace MyApp.UI.Forms
             dgvSessions.ThemeStyle.RowsStyle.SelectionBackColor = Color.LightBlue;
             dgvSessions.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
-
             // Add columns
             dgvSessions.Columns.Add("Channel", "Channel");
             dgvSessions.Columns.Add("StartTime", "Start Time");
@@ -201,6 +238,15 @@ namespace MyApp.UI.Forms
             this.Controls.Add(topPanel);
         }
 
+        // === Logout Button Handler ===
+        private void BtnLogout_Click(object? sender, EventArgs e)
+        {
+            var signInForm = new SignInForm();
+            this.Hide(); // Hide Dashboard
+            signInForm.ShowDialog();
+            this.Close(); // Close after returning
+        }
+
         // Draw Resume + Delete buttons in same cell
         private void DgvSessions_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
         {
@@ -212,7 +258,7 @@ namespace MyApp.UI.Forms
                 int buttonHeight = e.CellBounds.Height - 8;
                 Rectangle resumeRect = new Rectangle(e.CellBounds.Left + 4, e.CellBounds.Top + 4, buttonWidth, buttonHeight);
                 Rectangle deleteRect = new Rectangle(e.CellBounds.Left + buttonWidth + 8, e.CellBounds.Top + 4, buttonWidth, buttonHeight);
-                // ///////////
+
                 using (SolidBrush resumeBrush = new SolidBrush(Color.FromArgb(72, 255, 118)))
                 using (SolidBrush deleteBrush = new SolidBrush(Color.FromArgb(255, 72, 118)))
                 using (StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
@@ -238,8 +284,9 @@ namespace MyApp.UI.Forms
                 if (e.Location.X < buttonWidth)
                 {
                     var saleForm = new SaleScreenForm();
+                    this.Hide();
+                    saleForm.ShowDialog();
                     this.Close();
-                    saleForm.ShowDialog();                    
                 }
                 else
                 {
