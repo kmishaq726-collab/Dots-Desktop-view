@@ -1,6 +1,8 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Text;
+using System.Text.Json;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
 using MyApp.UI.Forms;
@@ -26,9 +28,10 @@ namespace MyApp.UI
         {
             // ==== Form Settings ====
             this.Text = "Sign In";
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.Sizable; // standard title bar
-            this.WindowState = FormWindowState.Normal;
+            this.WindowState = FormWindowState.Maximized;
+            //this.StartPosition = FormStartPosition.CenterScreen;
+           // this.FormBorderStyle = FormBorderStyle.Sizable; // standard title bar
+           // this.WindowState = FormWindowState.Normal;
             this.BackColor = Color.White; // fallback color
 
             // ==== Card Panel ====
@@ -139,19 +142,78 @@ namespace MyApp.UI
             base.OnPaint(e);
         }
 
-        private void BtnSignIn_Click(object? sender, EventArgs e)
+        private async void BtnSignIn_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtEmail.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
+            string email = txtEmail.Text.Trim();
+            string password = txtPassword.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
                 MessageBox.Show("Please enter both Email and Password.", "Validation",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            Dashboard dashboard = new Dashboard();
-            dashboard.Show();
+            btnSignIn.Enabled = false;
+            btnSignIn.Text = "Signing in...";
 
-            this.Hide(); // hides SignInForm
+            try
+            {
+                bool success = await SignInAsync(email, password);
+                if (success)
+                {
+                    Dashboard dashboard = new Dashboard();
+                    dashboard.Show();
+                    this.Hide();
+                }
+            }
+            finally
+            {
+                btnSignIn.Enabled = true;
+                btnSignIn.Text = "Sign In";
+            }
         }
+
+        private async Task<bool> SignInAsync(string email, string password)
+        {
+            var client = new HttpClient();
+            client.BaseAddress = new Uri("https://dots.optimuzai.com"); // Your API host
+
+            var payload = new
+            {
+                Username = email,  // match the field name expected by API
+                Password = password
+            };
+
+            string jsonPayload = JsonSerializer.Serialize(payload);
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            try
+            {
+                HttpResponseMessage response = await client.PostAsync("/api/v1/auth/Authenticate", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string result = await response.Content.ReadAsStringAsync();
+                    // You can parse the result if needed
+
+                    MessageBox.Show("Sign in success!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return true;
+                }
+                else
+                {
+                    string error = await response.Content.ReadAsStringAsync();
+                    MessageBox.Show("Sign in failed: " + error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
+
     }
 }
