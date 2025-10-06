@@ -17,8 +17,6 @@ namespace MyApp.UI.Forms
         private Guna2Button btnRefresh = null!;
         private Guna2Button btnAdd = null!;
         private Guna2DataGridView dgvSessions = null!;
-
-        // === Added field for Logout Button ===
         private Guna2Button btnLogout = null!;
 
         public Dashboard()
@@ -43,7 +41,7 @@ namespace MyApp.UI.Forms
                 ShadowDecoration = { Enabled = true, Depth = 6 }
             };
 
-            // Create container for labels (Stack them vertically)
+            // Labels container
             var labelPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -53,7 +51,7 @@ namespace MyApp.UI.Forms
                 Width = 300
             };
 
-            labelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F)); // 60% for Title
+            labelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F));
             labelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
 
             // Title Label
@@ -68,7 +66,7 @@ namespace MyApp.UI.Forms
                 TextAlign = ContentAlignment.BottomLeft
             };
 
-            // Cost Center Label (now below title)
+            // Cost Center Label
             lblCostCenter = new Label
             {
                 Text = "Cost Center 001",
@@ -80,26 +78,25 @@ namespace MyApp.UI.Forms
                 TextAlign = ContentAlignment.TopLeft
             };
 
-            // Add labels into labelPanel
+            // Add labels
             labelPanel.Controls.Add(lblTitle, 0, 0);
             labelPanel.Controls.Add(lblCostCenter, 0, 1);
 
-            // === Logout Button (Top Right Corner) ===
+            // === Logout Button ===
             btnLogout = new Guna2Button
             {
                 Text = "Logout",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.White,
-                BackColor = Color.FromArgb(72, 118, 255),
                 FillColor = Color.Red,
                 AutoSize = true,
                 Dock = DockStyle.Right,
                 BorderRadius = 8,
-                Margin = new Padding(5, 10, 5, 10)
+                Margin = new Padding(5, 10, 5, 10),
+                BackColor = Color.FromArgb(72, 118, 255)
             };
             btnLogout.Click += BtnLogout_Click;
 
-            // Add to topPanel
             topPanel.Controls.Add(btnLogout);
             topPanel.Controls.Add(labelPanel);
 
@@ -124,6 +121,7 @@ namespace MyApp.UI.Forms
                 Height = 36,
                 BorderRadius = 8,
                 Margin = new Padding(6)
+                
             };
 
             // === Search Button ===
@@ -152,10 +150,10 @@ namespace MyApp.UI.Forms
             };
             btnRefresh.Click += BtnRefresh_Click;
 
-            // === Add Button ===
+            // === Add Button (Select Customer) ===
             btnAdd = new Guna2Button
             {
-                Text = "Add",
+                Text = "Select Customer",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 AutoSize = true,
                 BorderRadius = 8,
@@ -171,9 +169,6 @@ namespace MyApp.UI.Forms
             actionPanel.Controls.Add(btnRefresh);
             actionPanel.Controls.Add(btnAdd);
 
-            // Finally, add action panel to your form
-            this.Controls.Add(actionPanel);
-
             // === DataGridView ===
             dgvSessions = new Guna2DataGridView
             {
@@ -186,7 +181,6 @@ namespace MyApp.UI.Forms
                 Theme = DataGridViewPresetThemes.DeepPurple,
             };
 
-            // style adjustments
             dgvSessions.ThemeStyle.HeaderStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             dgvSessions.ThemeStyle.HeaderStyle.ForeColor = Color.White;
             dgvSessions.ThemeStyle.HeaderStyle.BackColor = Color.FromArgb(72, 118, 255);
@@ -205,7 +199,6 @@ namespace MyApp.UI.Forms
             dgvSessions.Columns.Add("EndTime", "End Time");
             dgvSessions.Columns.Add("SessionState", "Session State");
 
-            // Action column (Resume/Delete inside one cell)
             var colAction = new DataGridViewButtonColumn
             {
                 HeaderText = "Actions",
@@ -213,12 +206,8 @@ namespace MyApp.UI.Forms
                 UseColumnTextForButtonValue = false
             };
             dgvSessions.Columns.Add(colAction);
-            dgvSessions.ClearSelection();
 
-            dgvSessions.CellPainting += DgvSessions_CellPainting;
-            dgvSessions.CellMouseClick += DgvSessions_CellMouseClick;
-
-            // Dummy row
+            // Dummy data
             dgvSessions.Rows.Add("Default", DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss tt"), "N/A", "In Progress");
             dgvSessions.Rows.Add("Default2", DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss tt"), "N/A", "Progress");
 
@@ -230,7 +219,8 @@ namespace MyApp.UI.Forms
                 row.DefaultCellStyle.SelectionForeColor = Color.Black;
             }
 
-            dgvSessions.ClearSelection();
+            dgvSessions.CellPainting += DgvSessions_CellPainting;
+            dgvSessions.CellMouseClick += DgvSessions_CellMouseClick;
 
             // === Add Controls to Form ===
             this.Controls.Add(dgvSessions);
@@ -238,16 +228,14 @@ namespace MyApp.UI.Forms
             this.Controls.Add(topPanel);
         }
 
-        // === Logout Button Handler ===
         private void BtnLogout_Click(object? sender, EventArgs e)
         {
             var signInForm = new SignInForm();
-            this.Hide(); // Hide Dashboard
+            this.Hide();
             signInForm.ShowDialog();
-            this.Close(); // Close after returning
+            this.Close();
         }
 
-        // Draw Resume + Delete buttons in same cell
         private void DgvSessions_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
         {
             if (e.ColumnIndex == dgvSessions.Columns["Action"].Index && e.RowIndex >= 0)
@@ -274,7 +262,6 @@ namespace MyApp.UI.Forms
             }
         }
 
-        // Handle clicks on Resume/Delete
         private void DgvSessions_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
         {
             if (e.ColumnIndex == dgvSessions.Columns["Action"].Index && e.RowIndex >= 0)
@@ -302,6 +289,6 @@ namespace MyApp.UI.Forms
             MessageBox.Show("Refreshing sessions...");
 
         private void BtnAdd_Click(object? sender, EventArgs e) =>
-            MessageBox.Show("Adding new session...");
+            MessageBox.Show("Select Customer clicked!");
     }
 }

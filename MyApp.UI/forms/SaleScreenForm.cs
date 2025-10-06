@@ -20,14 +20,14 @@ namespace MyApp.UI.Forms
         // Quick Amount Buttons
         private FlowLayoutPanel quickAmountPanel;
         private Guna2Button btnToggleSign;
-        private bool isPositive = true;   // track + / -
+        private bool isPositive = true;
 
         // Right side controls
         private FlowLayoutPanel saleTabsPanel;
         private FlowLayoutPanel paymentMethodsPanel;
         private FlowLayoutPanel pinnedItemsPanel;
         private FlowLayoutPanel actionButtonsPanel;
-        private Guna2TextBox txtCash; // cash textbox
+        private Guna2TextBox txtCash;
         private decimal netTotal = 0;
         private Guna2Button btnBack;
 
@@ -62,15 +62,14 @@ namespace MyApp.UI.Forms
             var leftPanel = mainSplit.Panel1;
             leftPanel.BackColor = Color.White;
 
-            // Create 2-row layout
             var leftLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 2
             };
-            leftLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50)); // Back button row
-            leftLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // Rest
+            leftLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
+            leftLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             leftPanel.Controls.Add(leftLayout);
 
             // Back Button
@@ -85,12 +84,10 @@ namespace MyApp.UI.Forms
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 Margin = new Padding(8),
-                
             };
             btnBack.Click += BtnBack_Click;
             leftLayout.Controls.Add(btnBack, 0, 0);
 
-            // Panel for rest of content
             var leftContent = new Panel { Dock = DockStyle.Fill };
             leftLayout.Controls.Add(leftContent, 0, 1);
 
@@ -105,7 +102,7 @@ namespace MyApp.UI.Forms
             };
             leftContent.Controls.Add(txtSearch);
 
-            // Cart Items area
+            // Cart Items
             cartItemsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -116,7 +113,7 @@ namespace MyApp.UI.Forms
             };
             leftContent.Controls.Add(cartItemsPanel);
 
-            // === Quick Amount Buttons ===
+            // Quick Amount Buttons
             quickAmountPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
@@ -128,12 +125,10 @@ namespace MyApp.UI.Forms
                 AutoScroll = true
             };
 
-            // +/- button
             btnToggleSign = MakeQuickButton("+/-");
             btnToggleSign.Click += ToggleQuickButtons;
             quickAmountPanel.Controls.Add(btnToggleSign);
 
-            // Quick value buttons
             quickAmountPanel.Controls.Add(MakeQuickButton("+50", QuickButtonClick));
             quickAmountPanel.Controls.Add(MakeQuickButton("+100", QuickButtonClick));
             quickAmountPanel.Controls.Add(MakeQuickButton("+500", QuickButtonClick));
@@ -142,7 +137,7 @@ namespace MyApp.UI.Forms
 
             leftContent.Controls.Add(quickAmountPanel);
 
-            // === Totals area ===
+            // Totals area
             var totalsPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
@@ -165,14 +160,12 @@ namespace MyApp.UI.Forms
             totalsPanel.Controls.Add(lblTotal, 1, 0);
             totalsPanel.Controls.Add(lblDiscount, 2, 0);
             totalsPanel.Controls.Add(lblChange, 3, 0);
-
             leftContent.Controls.Add(totalsPanel);
 
             // === RIGHT PANEL ===
             var rightPanel = mainSplit.Panel2;
             rightPanel.BackColor = Color.White;
 
-            // Tabs (sales tabs)
             saleTabsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -181,7 +174,6 @@ namespace MyApp.UI.Forms
             };
             rightPanel.Controls.Add(saleTabsPanel);
 
-            // Payment methods row
             paymentMethodsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -190,7 +182,6 @@ namespace MyApp.UI.Forms
             };
             rightPanel.Controls.Add(paymentMethodsPanel);
 
-            // Pinned items area
             pinnedItemsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -199,7 +190,7 @@ namespace MyApp.UI.Forms
             };
             rightPanel.Controls.Add(pinnedItemsPanel);
 
-            // === Action container (Label + Textbox + Buttons) ===
+            // === Action container ===
             var actionContainer = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
@@ -211,7 +202,6 @@ namespace MyApp.UI.Forms
             actionContainer.RowStyles.Add(new RowStyle(SizeType.Absolute, 45));
             actionContainer.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-            // Label
             var lblCash = new Label
             {
                 Text = "Payment by Cash",
@@ -223,7 +213,6 @@ namespace MyApp.UI.Forms
             };
             actionContainer.Controls.Add(lblCash, 0, 0);
 
-            // Textbox
             txtCash = new Guna2TextBox
             {
                 PlaceholderText = "Enter cash amount",
@@ -235,21 +224,15 @@ namespace MyApp.UI.Forms
             txtCash.KeyPress += (s, e) =>
             {
                 if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
-                {
                     e.Handled = true;
-                }
             };
 
             txtCash.TextChanged += (s, e) =>
             {
                 if (decimal.TryParse(txtCash.Text, out var cash))
-                {
                     lblChange.Text = $"Change: {cash - netTotal}";
-                }
                 else
-                {
                     lblChange.Text = "Change: 0";
-                }
             };
 
             actionContainer.Controls.Add(txtCash, 0, 1);
@@ -263,7 +246,9 @@ namespace MyApp.UI.Forms
                 Padding = new Padding(10)
             };
 
-            actionButtonsPanel.Controls.Add(MakeButton("Select Customer"));
+            actionButtonsPanel.Controls.Add(MakeButton("Select Product", SelectProduct_Click)); // ✅ added button here
+            actionButtonsPanel.Controls.Add(MakeButton("Select Customer", SelectCustomer_Click));
+
             actionButtonsPanel.Controls.Add(MakeButton("Notes"));
             actionButtonsPanel.Controls.Add(MakeButton("Help"));
             actionButtonsPanel.Controls.Add(MakeButton("Post Sale"));
@@ -275,12 +260,26 @@ namespace MyApp.UI.Forms
         private void BtnBack_Click(object? sender, EventArgs e)
         {
             var Dashboard = new Dashboard();
-            this.Hide(); // Hide Dashboard
+            this.Hide();
             Dashboard.ShowDialog();
-            this.Close(); // Close after returning
+            this.Close();
         }
 
-        // === Quick Button Click (apply to Cash textbox) ===
+        // === Open SearchProductForm ===
+        private void SelectProduct_Click(object sender, EventArgs e)
+        {
+            var form = new SearchProductForm();
+            form.ShowDialog();
+        }
+
+        // === Open SearchCustomerForm ===
+        private void SelectCustomer_Click(object sender, EventArgs e)
+        {
+            var form = new SearchCustomerForm();
+            form.ShowDialog(); // Open it as a modal window (same as SearchProductForm)
+        }
+
+
         private void QuickButtonClick(object sender, EventArgs e)
         {
             if (sender is Guna2Button btn)
@@ -292,14 +291,12 @@ namespace MyApp.UI.Forms
                         current = 0;
 
                     current += (btn.Text.StartsWith("-") ? -value : value);
-                    if (current < 0) current = 0; // prevent negative
-
+                    if (current < 0) current = 0;
                     txtCash.Text = current.ToString();
                 }
             }
         }
 
-        // === Toggle +/- ===
         private void ToggleQuickButtons(object sender, EventArgs e)
         {
             isPositive = !isPositive;
@@ -325,9 +322,9 @@ namespace MyApp.UI.Forms
             };
         }
 
-        private Guna2Button MakeButton(string text)
+        private Guna2Button MakeButton(string text, EventHandler? onClick = null)
         {
-            return new Guna2Button
+            var btn = new Guna2Button
             {
                 Text = text,
                 AutoSize = true,
@@ -337,9 +334,14 @@ namespace MyApp.UI.Forms
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 Margin = new Padding(5)
             };
+
+            if (onClick != null)
+                btn.Click += onClick;
+
+            return btn;
         }
 
-        private Guna2Button MakeQuickButton(string text, EventHandler onClick = null)
+        private Guna2Button MakeQuickButton(string text, EventHandler? onClick = null)
         {
             var btn = new Guna2Button
             {
