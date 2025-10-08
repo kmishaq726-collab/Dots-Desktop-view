@@ -29,3 +29,4 @@ D:\work\github\dots\Dots-Desktop-view\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine
 D:\work\github\dots\Dots-Desktop-view\MyApp.Engine\obj\Debug\net8.0\refint\MyApp.Engine.dll
 D:\work\github\dots\Dots-Desktop-view\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.pdb
 D:\work\github\dots\Dots-Desktop-view\MyApp.Engine\obj\Debug\net8.0\ref\MyApp.Engine.dll
+D:\Dot-Desktop-View\DotDesktopApp\MyApp.Engine\obj\Debug\net8.0\MyApp.Engine.sourcelink.json

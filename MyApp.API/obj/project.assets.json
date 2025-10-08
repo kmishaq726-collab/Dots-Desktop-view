@@ -517,24 +517,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\User\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\User\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.API\\MyApp.API.csproj",
+      "projectUniqueName": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.API\\MyApp.API.csproj",
       "projectName": "MyApp.API",
-      "projectPath": "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.API\\MyApp.API.csproj",
+      "projectPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.API\\MyApp.API.csproj",
       "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.API\\obj\\",
+      "outputPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.API\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
         "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -542,18 +537,17 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.Common\\MyApp.Common.csproj": {
-              "projectPath": "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.Common\\MyApp.Common.csproj"
+            "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.Common\\MyApp.Common.csproj": {
+              "projectPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.Common\\MyApp.Common.csproj"
             },
-            "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.Engine\\MyApp.Engine.csproj": {
-              "projectPath": "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.Engine\\MyApp.Engine.csproj"
+            "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.Engine\\MyApp.Engine.csproj": {
+              "projectPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.Engine\\MyApp.Engine.csproj"
             }
           }
         }
@@ -602,7 +596,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

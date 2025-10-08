@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "X88Dfc7g6bs=",
+  "dgSpecHash": "071qkSsvSZs=",
   "success": true,
-  "projectFilePath": "D:\\work\\github\\dots\\Dots-Desktop-view\\MyApp.API\\MyApp.API.csproj",
+  "projectFilePath": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.API\\MyApp.API.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\User\\.nuget\\packages\\microsoft.aspnetcore.openapi\\8.0.20\\microsoft.aspnetcore.openapi.8.0.20.nupkg.sha512",
     "C:\\Users\\User\\.nuget\\packages\\microsoft.extensions.apidescription.server\\6.0.5\\microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",

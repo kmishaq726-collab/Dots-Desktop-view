@@ -175,11 +175,21 @@ namespace MyApp.UI.Forms
                 Padding = new Padding(10)
             };
 
+            // === Back Button ===
+            var btnBack = MakeButton("Back");
+            btnBack.Click += (s, e) =>
+            {
+                //this.Hide();
+                //Dashboard dashboard = new Dashboard();
+                //dashboard.Show();
+            };
+
             var btnCustomer = MakeButton("Select Customer");
             var btnNotes = MakeButton("Notes");
             var btnHelp = MakeButton("Help");
             var btnPostSale = MakeButton("Post Sale");
 
+            actionButtonsPanel.Controls.Add(btnBack);
             actionButtonsPanel.Controls.Add(btnCustomer);
             actionButtonsPanel.Controls.Add(btnNotes);
             actionButtonsPanel.Controls.Add(btnHelp);

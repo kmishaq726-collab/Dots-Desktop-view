@@ -1,11 +1,15 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Net.Http.Headers;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
 using MyApp.UI.Forms;
+using MyApp.UI.Models; // Ensure SystemConfigResponse and related models are here
 
 namespace MyApp.UI
 {
@@ -17,24 +21,15 @@ namespace MyApp.UI
         private Guna2TextBox txtPassword = null!;
         private Guna2GradientButton btnSignIn = null!;
         private Label lblTitle = null!;
-        private LinkLabel linkRegister = null!;
 
-        public SignInForm()
-        {
-            InitializeComponent();
-        }
+        public SignInForm() => InitializeComponent();
 
         private void InitializeComponent()
         {
-            // ==== Form Settings ====
             this.Text = "Sign In";
             this.WindowState = FormWindowState.Maximized;
-            //this.StartPosition = FormStartPosition.CenterScreen;
-           // this.FormBorderStyle = FormBorderStyle.Sizable; // standard title bar
-           // this.WindowState = FormWindowState.Normal;
-            this.BackColor = Color.White; // fallback color
+            this.BackColor = Color.White;
 
-            // ==== Card Panel ====
             cardPanel = new Guna2Panel
             {
                 BorderRadius = 28,
@@ -44,31 +39,27 @@ namespace MyApp.UI
             };
             this.Controls.Add(cardPanel);
 
-            // Center card on resize
             this.Resize += (s, e) =>
             {
                 cardPanel.Left = Math.Max(40, (this.ClientSize.Width - cardPanel.Width) / 2);
                 cardPanel.Top = Math.Max(40, (this.ClientSize.Height - cardPanel.Height) / 2);
             };
 
-            // ==== Layout inside Card ====
             layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 Padding = new Padding(36, 28, 36, 28),
                 ColumnCount = 1,
-                RowCount = 6,
+                RowCount = 5,
                 BackColor = Color.Transparent
             };
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 120)); // Title
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));  // Email
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));  // Password
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));  // Button
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));  // Spacer
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));  // Register
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             cardPanel.Controls.Add(layout);
 
-            // ==== Title ====
             lblTitle = new Label
             {
                 Text = "DOTS",
@@ -79,7 +70,6 @@ namespace MyApp.UI
             };
             layout.Controls.Add(lblTitle, 0, 0);
 
-            // ==== Email ====
             txtEmail = new Guna2TextBox
             {
                 PlaceholderText = "Email address",
@@ -94,7 +84,6 @@ namespace MyApp.UI
             txtEmail.FocusedState.BorderColor = Color.FromArgb(72, 118, 255);
             layout.Controls.Add(txtEmail, 0, 1);
 
-            // ==== Password ====
             txtPassword = new Guna2TextBox
             {
                 PlaceholderText = "Password",
@@ -110,12 +99,10 @@ namespace MyApp.UI
             txtPassword.FocusedState.BorderColor = Color.FromArgb(72, 118, 255);
             layout.Controls.Add(txtPassword, 0, 2);
 
-            // ==== Sign In Button ====
             btnSignIn = new Guna2GradientButton
             {
                 Text = "Sign In",
                 BorderRadius = 18,
-                Animated = false,
                 FillColor = Color.FromArgb(72, 118, 255),
                 FillColor2 = Color.FromArgb(156, 89, 233),
                 Font = new Font("Segoe UI Semibold", 14),
@@ -127,13 +114,11 @@ namespace MyApp.UI
             btnSignIn.Click += BtnSignIn_Click;
             layout.Controls.Add(btnSignIn, 0, 3);
 
-            // Center card initially
             this.OnResize(EventArgs.Empty);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            // static gradient background
             using var brush = new LinearGradientBrush(this.ClientRectangle,
                 Color.FromArgb(72, 118, 255),
                 Color.FromArgb(156, 89, 233),
@@ -147,25 +132,39 @@ namespace MyApp.UI
             string email = txtEmail.Text.Trim();
             string password = txtPassword.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-            {
-                MessageBox.Show("Please enter both Email and Password.", "Validation",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            // For testing:
+            email = "system-admin";
+            password = "SysAdmin";
 
             btnSignIn.Enabled = false;
             btnSignIn.Text = "Signing in...";
 
             try
             {
-                bool success = await SignInAsync(email, password);
-                if (success)
+                string? token = await AuthenticateAsync(email, password);
+                if (!string.IsNullOrEmpty(token))
                 {
-                    Dashboard dashboard = new Dashboard();
-                    dashboard.Show();
-                    this.Hide();
+                    // Create full Authorization header string
+                    string authHeader =  token;
+                    MessageBox.Show(token);
+
+                    var configData = await LoadSystemConfigAsync(token);
+                    if (configData != null)
+                    {
+
+                        string json = JsonSerializer.Serialize(configData, new JsonSerializerOptions{ WriteIndented = true });
+                        MessageBox.Show(json, "System Config Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("Login Successful!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        Dashboard dashboard = new Dashboard(authHeader); 
+                        dashboard.Show();
+                        this.Hide();
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("An error occurred:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -174,46 +173,65 @@ namespace MyApp.UI
             }
         }
 
-        private async Task<bool> SignInAsync(string email, string password)
+        private async Task<string?> AuthenticateAsync(string email, string password)
         {
-            var client = new HttpClient();
-            client.BaseAddress = new Uri("https://dots.optimuzai.com"); // Your API host
+            using var client = new HttpClient { BaseAddress = new Uri("https://dots.optimuzai.com") };
+            var payload = new { Username = email, Password = password };
+            var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-            var payload = new
+            HttpResponseMessage response = await client.PostAsync("/api/v1/auth/Authenticate", content);
+            string result = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
             {
-                Username = email,  // match the field name expected by API
-                Password = password
-            };
-
-            string jsonPayload = JsonSerializer.Serialize(payload);
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                MessageBox.Show("Authentication failed:\n" + result);
+                return null;
+            }
 
             try
             {
-                HttpResponseMessage response = await client.PostAsync("/api/v1/auth/Authenticate", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    string result = await response.Content.ReadAsStringAsync();
-                    // You can parse the result if needed
-
-                    MessageBox.Show("Sign in success!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return true;
-                }
-                else
-                {
-                    string error = await response.Content.ReadAsStringAsync();
-                    MessageBox.Show("Sign in failed: " + error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
-                }
+                var doc = JsonDocument.Parse(result);
+                if (doc.RootElement.TryGetProperty("Data", out var data) &&
+                    data.TryGetProperty("Token", out var token))
+                    return token.GetString();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
+                MessageBox.Show("Error reading token: " + ex.Message);
             }
+
+            MessageBox.Show("Unable to extract token from response.");
+            return null;
         }
 
+        private async Task<SystemConfigResponse?> LoadSystemConfigAsync(string fullAuthHeader)
+        {
+            using var client = new HttpClient { BaseAddress = new Uri("https://dots.optimuzai.com") };
+            client.DefaultRequestHeaders.Clear();
+            client.DefaultRequestHeaders.Add("Authorization", fullAuthHeader);
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+            using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+
+            HttpResponseMessage response = await client.PostAsync("/api/system/common/SystemConfig", content);
+            string result = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show($"Failed to load SystemConfig:\n{result}");
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<SystemConfigResponse>(result,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error parsing SystemConfig: " + ex.Message);
+                return null;
+            }
+        }
     }
 }
