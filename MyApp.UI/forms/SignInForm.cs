@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
 using MyApp.UI.Forms;
-using MyApp.UI.Models; // Ensure SystemConfigResponse and related models are here
+using MyApp.UI.Models;
+using Microsoft.Win32; // Ensure SystemConfigResponse and related models are here
 
 namespace MyApp.UI
 {
@@ -145,20 +146,23 @@ namespace MyApp.UI
                 if (!string.IsNullOrEmpty(token))
                 {
                     // Create full Authorization header string
-                    string authHeader =  token;
-                    MessageBox.Show(token);
+                    string authHeader = token;
+                    //MessageBox.Show(token);
 
                     var configData = await LoadSystemConfigAsync(token);
                     if (configData != null)
                     {
 
-                        string json = JsonSerializer.Serialize(configData, new JsonSerializerOptions{ WriteIndented = true });
-                        MessageBox.Show(json, "System Config Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        string json = JsonSerializer.Serialize(configData, new JsonSerializerOptions { WriteIndented = true });
+                        //MessageBox.Show(json, "System Config Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         MessageBox.Show("Login Successful!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        Dashboard dashboard = new Dashboard(authHeader); 
-                        dashboard.Show();
-                        this.Hide();
+                        RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\MyCompany\MyApp");
+                        key.SetValue("AuthToken", authHeader);
+                        key.Close();
+
+                        this.DialogResult = DialogResult.OK; // ✅ signal success to AppContext
+                        this.Close();
                     }
                 }
             }

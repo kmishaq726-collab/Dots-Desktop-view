@@ -88,3 +88,4 @@ If using **API**:
 - Easier to maintain & test
 - UI and API can evolve independently
 - Reusable Engine logic
+dotnet run --project ./MyApp.UI

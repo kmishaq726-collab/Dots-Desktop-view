@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Printing;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
+using Microsoft.Win32;
 
 namespace MyApp.UI.Forms
 {
@@ -24,8 +26,7 @@ namespace MyApp.UI.Forms
         private Guna2Panel topPanel = null!;
         private Label lblTitle = null!;
         private Label lblCostCenter = null!;
-        private TableLayoutPanel root = null!;
-        private TableLayoutPanel actionBar = null!;
+        private Guna2Panel actionPanel = null!;
         private FlowLayoutPanel leftActions = null!;
         private FlowLayoutPanel rightSearch = null!;
         private Guna2TextBox txtSearch = null!;
@@ -43,41 +44,60 @@ namespace MyApp.UI.Forms
 
         private enum ActionButtonPart { None, Resume, Delete }
 
-        public Dashboard(string authHeader)
+        public Dashboard()
         {
-            _authHeader = authHeader;
+            _authHeader = GetAuthToken();
+
             InitializeComponent();
             _ = LoadSessionsAsync();
+
         }
 
         private void InitializeComponent()
         {
+
+            if (_authHeader == null)
+            {
+                SignInForm Form = new SignInForm();
+                this.Tag = "SignOut"; // handled by AppContext
+                this.Shown += (s, e) => this.Close(); // close after showing (to trigger AppContext)
+                return;
+            }
             AutoScaleMode = AutoScaleMode.Dpi;
-            Text = "Dashboard";
+            Text = "Sales Dashboard";
             WindowState = FormWindowState.Maximized;
             BackColor = BrandBackground;
-            Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            Font = new Font("Segoe UI", 10F);
 
-            // ========== ROOT ==========
-            root = new TableLayoutPanel
+            var root = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = BrandBackground,
                 ColumnCount = 1,
-                RowCount = 3
+                RowCount = 3,
+                Padding = new Padding(0)
             };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72f));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72f));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));  // Header
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));  // Actions
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));  // Grid
 
-            // ========== TOP BAR ==========
+            // ======= HEADER =======
             topPanel = new Guna2Panel
             {
                 Dock = DockStyle.Fill,
                 FillColor = BrandPrimary,
                 Padding = new Padding(24, 12, 24, 12),
-                ShadowDecoration = { Enabled = true, Depth = 6 }
+                ShadowDecoration = { Enabled = true }
             };
+
+            var headerLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                BackColor = Color.Transparent
+            };
+            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
+            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
 
             lblTitle = new Label
             {
@@ -93,35 +113,46 @@ namespace MyApp.UI.Forms
                 Text = "Cost Center: 001",
                 Font = new Font("Segoe UI", 11, FontStyle.Regular),
                 ForeColor = Color.White,
-                AutoSize = false,
-                Dock = DockStyle.Right,
-                TextAlign = ContentAlignment.MiddleRight
+                TextAlign = ContentAlignment.MiddleRight,
+                Dock = DockStyle.Fill
             };
 
-            topPanel.Controls.Add(lblTitle);
-            topPanel.Controls.Add(lblCostCenter);
+            headerLayout.Controls.Add(lblTitle, 0, 0);
+            headerLayout.Controls.Add(lblCostCenter, 1, 0);
+            topPanel.Controls.Add(headerLayout);
 
-            // ========== ACTION BAR ==========
-            actionBar = new TableLayoutPanel
+            // ======= ACTION BAR =======
+            actionPanel = new Guna2Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                ColumnCount = 3,
-                Padding = new Padding(20, 12, 20, 12),
+                Padding = new Padding(20, 10, 20, 10),
+                ShadowDecoration = { Enabled = true, Depth = 1 },
             };
-            actionBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            actionBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            actionBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            var actionLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 3
+            };
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
             leftActions = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
-                AutoSize = true
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                WrapContents = true
             };
+
             rightSearch = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
-                AutoSize = true
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                WrapContents = false
             };
 
             btnAdd = CreateButton("➕ Add Session", BrandPrimary, BtnAdd_Click);
@@ -132,24 +163,24 @@ namespace MyApp.UI.Forms
             {
                 PlaceholderText = "Search by Channel or State...",
                 Font = new Font("Segoe UI", 10),
-                Width = 280,
+                Width = 260,
                 Height = 40,
-                BorderRadius = 10,
-                BorderColor = Color.LightGray,
-                Margin = new Padding(0, 0, 10, 0),
-               // IconLeft = Properties.Resources.search // Optional: if you have an icon resource
+                BorderRadius = 8,
+                BorderColor = Color.Silver,
+                Margin = new Padding(0, 0, 10, 0)
             };
 
             leftActions.Controls.Add(btnAdd);
-            leftActions.Controls.Add(btnRefresh);
+            //            leftActions.Controls.Add(btnRefresh);
             rightSearch.Controls.Add(txtSearch);
             rightSearch.Controls.Add(btnSearch);
 
-            actionBar.Controls.Add(leftActions, 0, 0);
-            actionBar.Controls.Add(new Panel(), 1, 0);
-            actionBar.Controls.Add(rightSearch, 2, 0);
+            actionLayout.Controls.Add(leftActions, 0, 0);
+            actionLayout.Controls.Add(new Panel(), 1, 0);
+            actionLayout.Controls.Add(rightSearch, 2, 0);
+            actionPanel.Controls.Add(actionLayout);
 
-            // ========== GRID ==========
+            // ======= GRID =======
             dgvSessions = new Guna2DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -161,55 +192,74 @@ namespace MyApp.UI.Forms
                 AutoGenerateColumns = false,
                 EnableHeadersVisualStyles = false,
                 BackgroundColor = Color.White,
-                GridColor = Color.FromArgb(220, 225, 230)
+                BorderStyle = BorderStyle.None,
+                GridColor = Color.FromArgb(230, 230, 240),
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                Margin = new Padding(0),
+
             };
 
+            //MessageBox.Show(GetAuthToken());
+
+            // --- HEADER STYLING (FIXES WHITE STRIP) ---
+            dgvSessions.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
             dgvSessions.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
             {
                 BackColor = BrandPrimary,
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 11, FontStyle.Bold),
                 Alignment = DataGridViewContentAlignment.MiddleCenter,
-                Padding = new Padding(0, 10, 0, 10)
+                Padding = new Padding(0, 6, 0, 6),
+
             };
-            dgvSessions.ColumnHeadersHeight = 56;
+            dgvSessions.ColumnHeadersHeight = 50;
+
             dgvSessions.DefaultCellStyle = new DataGridViewCellStyle
             {
                 BackColor = Color.White,
                 ForeColor = Color.Black,
                 Font = new Font("Segoe UI", 10),
-                SelectionBackColor = Color.FromArgb(235, 242, 255),
+                SelectionBackColor = Color.FromArgb(230, 240, 255),
                 SelectionForeColor = Color.Black,
                 Alignment = DataGridViewContentAlignment.MiddleCenter
             };
             dgvSessions.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 253);
             dgvSessions.RowTemplate.Height = 44;
 
+            // --- APPLY GUNA THEME FIX ---
+            dgvSessions.ThemeStyle.BackColor = Color.White;
+            dgvSessions.ThemeStyle.GridColor = Color.FromArgb(230, 230, 240);
+            dgvSessions.ThemeStyle.HeaderStyle.BackColor = BrandPrimary;
+            dgvSessions.ThemeStyle.HeaderStyle.ForeColor = Color.White;
+            dgvSessions.ThemeStyle.RowsStyle.BackColor = Color.White;
+            dgvSessions.ThemeStyle.AlternatingRowsStyle.BackColor = Color.FromArgb(248, 250, 253);
+
+            // --- COLUMNS ---
             dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Channel", DataPropertyName = "Channel", FillWeight = 25 });
             dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Start Time", DataPropertyName = "StartTime", FillWeight = 25 });
             dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "End Time", DataPropertyName = "EndTime", FillWeight = 25 });
             dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Session State", DataPropertyName = "SessionState", FillWeight = 15 });
             dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Actions", ReadOnly = true, FillWeight = 10 });
 
-            var actionCol = dgvSessions.Columns["Actions"];
-            actionColumnIndex = actionCol?.Index ?? dgvSessions.Columns.Count - 1;
-
+            actionColumnIndex = dgvSessions.Columns["Actions"]?.Index ?? dgvSessions.Columns.Count - 1;
             dgvSessions.DataSource = visibleSessions;
 
+            // --- EVENTS ---
             dgvSessions.CellPainting += DgvSessions_CellPainting;
             dgvSessions.CellMouseClick += DgvSessions_CellMouseClick;
             dgvSessions.CellMouseMove += DgvSessions_CellMouseMove;
             dgvSessions.CellMouseLeave += DgvSessions_CellMouseLeave;
 
+            // --- ADD TO ROOT ---
             root.Controls.Add(topPanel, 0, 0);
-            root.Controls.Add(actionBar, 0, 1);
+            root.Controls.Add(actionPanel, 0, 1);
             root.Controls.Add(dgvSessions, 0, 2);
             Controls.Add(root);
         }
 
         private Guna2Button CreateButton(string text, Color color, EventHandler onClick)
         {
-            return new Guna2Button
+            var btn = new Guna2Button
             {
                 Text = text,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
@@ -219,9 +269,10 @@ namespace MyApp.UI.Forms
                 ForeColor = Color.White,
                 Height = 40,
                 Margin = new Padding(0, 0, 10, 0),
-                Padding = new Padding(14, 0, 14, 0),
-               // Click = onClick
+                Padding = new Padding(14, 0, 14, 0)
             };
+            btn.Click += onClick;
+            return btn;
         }
 
         // ================== DATA LOAD ==================
@@ -281,10 +332,7 @@ namespace MyApp.UI.Forms
             visibleSessions.ResetBindings();
         }
 
-        private async void BtnRefresh_Click(object? sender, EventArgs e)
-        {
-            await LoadSessionsAsync();
-        }
+        private async void BtnRefresh_Click(object? sender, EventArgs e) => await LoadSessionsAsync();
 
         private void BtnSearch_Click(object? sender, EventArgs e)
         {
@@ -305,7 +353,14 @@ namespace MyApp.UI.Forms
 
         private void BtnAdd_Click(object? sender, EventArgs e)
         {
-            MessageBox.Show("Add new session clicked!");
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\MyCompany\MyApp", true);
+            if (key != null)
+            {
+                key.DeleteValue("AuthToken", false);
+                key.Close();
+            }
+            this.Tag = "SignOut"; // handled by AppContext
+            this.Close(); // close after showing (to trigger AppContext)
         }
 
         // ================== GRID BUTTONS ==================
@@ -336,15 +391,20 @@ namespace MyApp.UI.Forms
 
         private void DgvSessions_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
         {
+            //Object obj = Null;
             if (e.RowIndex < 0 || e.ColumnIndex != actionColumnIndex) return;
-            MessageBox.Show("Action button clicked!");
+            //MessageBox.Show("Action button clicked!  1 ");
+            SaleScreenForm saleScreen = new SaleScreenForm();
+            this.Hide();
+            saleScreen.Show();
+
         }
 
         private void DgvSessions_CellMouseMove(object? sender, DataGridViewCellMouseEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex != actionColumnIndex)
             {
-                hoverRowIndex = -1;
+                // hoverRowIndex = -1;
                 hoverPart = ActionButtonPart.None;
                 dgvSessions.Cursor = Cursors.Default;
                 return;
@@ -367,6 +427,18 @@ namespace MyApp.UI.Forms
                 dgvSessions.Cursor = part == ActionButtonPart.None ? Cursors.Default : Cursors.Hand;
                 dgvSessions.Invalidate(cellRect);
             }
+        }
+
+        public string GetAuthToken()
+        {
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\MyCompany\MyApp");
+            if (key != null)
+            {
+                var token_auth = key.GetValue("AuthToken") as string;
+                key.Close();
+                return token_auth;
+            }
+            return "null";
         }
 
         private void DgvSessions_CellMouseLeave(object? sender, DataGridViewCellEventArgs e)
@@ -415,7 +487,7 @@ namespace MyApp.UI.Forms
         }
     }
 
-    // 🔧 Helper Extension for Rounded Rectangles
+    // Rounded Rectangle Extension
     public static class GraphicsExtensions
     {
         public static void FillRoundedRectangle(this Graphics g, Brush brush, Rectangle bounds, int radius)
