@@ -22,6 +22,7 @@ namespace MyApp.UI
         public SignInForm()
         {
             InitializeComponent();
+            
         }
 
         private void InitializeComponent()
