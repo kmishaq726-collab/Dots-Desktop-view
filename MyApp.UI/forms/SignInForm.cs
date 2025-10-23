@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
 using MyApp.UI.Forms;
-using MyApp.UI.Models;
-using Microsoft.Win32; // Ensure SystemConfigResponse and related models are here
+using MyApp.Models;
+using Microsoft.Win32;
+using MyApp.UI.Data;
+using MyApp.Common;
 
 namespace MyApp.UI
 {
@@ -133,7 +135,6 @@ namespace MyApp.UI
             string email = txtEmail.Text.Trim();
             string password = txtPassword.Text.Trim();
 
-            // For testing:
             email = "system-admin";
             password = "SysAdmin";
 
@@ -145,23 +146,19 @@ namespace MyApp.UI
                 string? token = await AuthenticateAsync(email, password);
                 if (!string.IsNullOrEmpty(token))
                 {
-                    // Create full Authorization header string
                     string authHeader = token;
-                    //MessageBox.Show(token);
 
-                    var configData = await LoadSystemConfigAsync(token);
+                    object configData = await LoadSystemConfigAsync(token);
                     if (configData != null)
                     {
-
                         string json = JsonSerializer.Serialize(configData, new JsonSerializerOptions { WriteIndented = true });
-                        //MessageBox.Show(json, "System Config Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        MessageBox.Show("Login Successful!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                        SystemConfigRepository.SaveConfig("SystemConfig", configData);
                         RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\MyCompany\MyApp");
                         key.SetValue("AuthToken", authHeader);
                         key.Close();
 
-                        this.DialogResult = DialogResult.OK; // ✅ signal success to AppContext
+                        this.DialogResult = DialogResult.OK;
                         this.Close();
                     }
                 }
@@ -179,11 +176,11 @@ namespace MyApp.UI
 
         private async Task<string?> AuthenticateAsync(string email, string password)
         {
-            using var client = new HttpClient { BaseAddress = new Uri("https://dots.optimuzai.com") };
+            using var client = new HttpClient { BaseAddress = new Uri(AppConfig.BaseApiUrl) };
             var payload = new { Username = email, Password = password };
             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-            HttpResponseMessage response = await client.PostAsync("/api/v1/auth/Authenticate", content);
+            HttpResponseMessage response = await client.PostAsync("v1/auth/Authenticate", content);
             string result = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -210,14 +207,14 @@ namespace MyApp.UI
 
         private async Task<SystemConfigResponse?> LoadSystemConfigAsync(string fullAuthHeader)
         {
-            using var client = new HttpClient { BaseAddress = new Uri("https://dots.optimuzai.com") };
+            using var client = new HttpClient { BaseAddress = new Uri(AppConfig.BaseApiUrl) };
             client.DefaultRequestHeaders.Clear();
             client.DefaultRequestHeaders.Add("Authorization", fullAuthHeader);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             using var content = new StringContent("{}", Encoding.UTF8, "application/json");
 
-            HttpResponseMessage response = await client.PostAsync("/api/system/common/SystemConfig", content);
+            HttpResponseMessage response = await client.PostAsync("system/common/SystemConfig", content);
             string result = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)

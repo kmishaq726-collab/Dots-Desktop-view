@@ -3,184 +3,164 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Drawing.Printing;
-using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
 using Microsoft.Win32;
+using MyApp.Common;
+using MyApp.Models;
+using MyApp.UI.Data;
 
 namespace MyApp.UI.Forms
 {
     public class Dashboard : Form
     {
-        private static readonly Color BrandPrimary = Color.FromArgb(63, 114, 255);
-        private static readonly Color BrandSuccess = Color.FromArgb(46, 204, 113);
-        private static readonly Color BrandDanger = Color.FromArgb(231, 76, 60);
-        private static readonly Color BrandBackground = Color.FromArgb(247, 249, 252);
+        private static readonly Color BrandPrimary = Color.FromArgb(72, 118, 255);
+        private static readonly Color BrandSuccess = Color.FromArgb(72, 255, 118);
+        private static readonly Color BrandDanger = Color.FromArgb(255, 72, 118);
+        private static readonly Color BrandBackground = Color.White;
 
         private readonly string _authHeader;
 
         private Guna2Panel topPanel = null!;
         private Label lblTitle = null!;
         private Label lblCostCenter = null!;
-        private Guna2Panel actionPanel = null!;
-        private FlowLayoutPanel leftActions = null!;
-        private FlowLayoutPanel rightSearch = null!;
+        private Guna2Button btnLogout = null!;
+
+        private FlowLayoutPanel actionPanel = null!;
         private Guna2TextBox txtSearch = null!;
         private Guna2Button btnSearch = null!;
         private Guna2Button btnRefresh = null!;
         private Guna2Button btnAdd = null!;
-        private Guna2DataGridView dgvSessions = null!;
 
+        private Guna2DataGridView dgvSessions = null!;
         private int actionColumnIndex = -1;
-        private int hoverRowIndex = -1;
-        private ActionButtonPart hoverPart = ActionButtonPart.None;
 
         private readonly List<SaleSessionView> allSessions = new();
         private readonly BindingList<SaleSessionView> visibleSessions = new();
 
         private enum ActionButtonPart { None, Resume, Delete }
+        private int hoverRowIndex = -1;
+        private ActionButtonPart hoverPart = ActionButtonPart.None;
 
         public Dashboard()
         {
             _authHeader = GetAuthToken();
-
             InitializeComponent();
             _ = LoadSessionsAsync();
-
         }
 
         private void InitializeComponent()
         {
-
-            if (_authHeader == null)
+            if (string.IsNullOrEmpty(_authHeader) || _authHeader == "null")
             {
-                SignInForm Form = new SignInForm();
-                this.Tag = "SignOut"; // handled by AppContext
-                this.Shown += (s, e) => this.Close(); // close after showing (to trigger AppContext)
+                this.Tag = "SignOut";
+                this.Shown += (s, e) => this.Close();
                 return;
             }
-            AutoScaleMode = AutoScaleMode.Dpi;
-            Text = "Sales Dashboard";
-            WindowState = FormWindowState.Maximized;
-            BackColor = BrandBackground;
-            Font = new Font("Segoe UI", 10F);
 
-            var root = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = BrandBackground,
-                ColumnCount = 1,
-                RowCount = 3,
-                Padding = new Padding(0)
-            };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));  // Header
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));  // Actions
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));  // Grid
+            this.Text = "Dashboard";
+            this.WindowState = FormWindowState.Maximized;
+            this.BackColor = BrandBackground;
+            this.Font = new Font("Segoe UI", 10);
 
-            // ======= HEADER =======
+            // === Top Panel ===
             topPanel = new Guna2Panel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                Height = 80,
                 FillColor = BrandPrimary,
-                Padding = new Padding(24, 12, 24, 12),
-                ShadowDecoration = { Enabled = true }
+                Padding = new Padding(15, 10, 15, 10),
+                ShadowDecoration = { Enabled = true, Depth = 6 }
             };
 
-            var headerLayout = new TableLayoutPanel
+            var labelPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                BackColor = Color.Transparent
+                ColumnCount = 1,
+                RowCount = 2,
+                AutoSize = true,
+                Width = 300
             };
-            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
-            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
+            labelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F));
+            labelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
 
             lblTitle = new Label
             {
-                Text = "🧾 Sales Dashboard",
-                Font = new Font("Segoe UI Semibold", 20, FontStyle.Bold),
+                Text = "Sales Sessions",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
-                Dock = DockStyle.Left
+                Dock = DockStyle.Fill,
+                BackColor = BrandPrimary,
+                TextAlign = ContentAlignment.BottomLeft
             };
 
             lblCostCenter = new Label
             {
-                Text = "Cost Center: 001",
-                Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                Text = "Cost Center 001",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = Color.White,
-                TextAlign = ContentAlignment.MiddleRight,
-                Dock = DockStyle.Fill
-            };
-
-            headerLayout.Controls.Add(lblTitle, 0, 0);
-            headerLayout.Controls.Add(lblCostCenter, 1, 0);
-            topPanel.Controls.Add(headerLayout);
-
-            // ======= ACTION BAR =======
-            actionPanel = new Guna2Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(20, 10, 20, 10),
-                ShadowDecoration = { Enabled = true, Depth = 1 },
-            };
-
-            var actionLayout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3
-            };
-            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-            leftActions = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.LeftToRight,
                 AutoSize = true,
                 Dock = DockStyle.Fill,
-                WrapContents = true
+                BackColor = BrandPrimary,
+                TextAlign = ContentAlignment.TopLeft
             };
 
-            rightSearch = new FlowLayoutPanel
+            labelPanel.Controls.Add(lblTitle, 0, 0);
+            labelPanel.Controls.Add(lblCostCenter, 0, 1);
+
+            btnLogout = new Guna2Button
             {
-                FlowDirection = FlowDirection.LeftToRight,
+                Text = "Logout",
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.White,
+                FillColor = Color.Red,
                 AutoSize = true,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Right,
+                BorderRadius = 8,
+                Margin = new Padding(5, 10, 5, 10),
+                BackColor = BrandPrimary
+            };
+            btnLogout.Click += BtnLogout_Click;
+
+            topPanel.Controls.Add(btnLogout);
+            topPanel.Controls.Add(labelPanel);
+
+            // === Action Panel ===
+            actionPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                Padding = new Padding(10),
+                FlowDirection = FlowDirection.RightToLeft,
+                BackColor = Color.WhiteSmoke,
+                AutoSize = true,
                 WrapContents = false
             };
 
-            btnAdd = CreateButton("➕ Add Session", BrandPrimary, BtnAdd_Click);
-            btnRefresh = CreateButton("🔄 Refresh", BrandSuccess, BtnRefresh_Click);
-            btnSearch = CreateButton("🔍 Search", BrandPrimary, BtnSearch_Click);
-
             txtSearch = new Guna2TextBox
             {
-                PlaceholderText = "Search by Channel or State...",
+                PlaceholderText = "Search",
                 Font = new Font("Segoe UI", 10),
-                Width = 260,
-                Height = 40,
+                Width = 220,
+                Height = 36,
                 BorderRadius = 8,
-                BorderColor = Color.Silver,
-                Margin = new Padding(0, 0, 10, 0)
+                Margin = new Padding(6)
             };
 
-            leftActions.Controls.Add(btnAdd);
-            //            leftActions.Controls.Add(btnRefresh);
-            rightSearch.Controls.Add(txtSearch);
-            rightSearch.Controls.Add(btnSearch);
+            btnSearch = CreateButton("Search", BrandPrimary, BtnSearch_Click);
+            btnRefresh = CreateButton("Refresh", BrandPrimary, async (s, e) => await LoadSessionsAsync());
+            btnAdd = CreateButton("Select Customer", BrandPrimary, BtnAdd_Click);
 
-            actionLayout.Controls.Add(leftActions, 0, 0);
-            actionLayout.Controls.Add(new Panel(), 1, 0);
-            actionLayout.Controls.Add(rightSearch, 2, 0);
-            actionPanel.Controls.Add(actionLayout);
+            actionPanel.Controls.Add(txtSearch);
+            actionPanel.Controls.Add(btnSearch);
+            actionPanel.Controls.Add(btnRefresh);
+            actionPanel.Controls.Add(btnAdd);
 
-            // ======= GRID =======
+            // === DataGridView ===
             dgvSessions = new Guna2DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -189,72 +169,44 @@ namespace MyApp.UI.Forms
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                Theme = Guna.UI2.WinForms.Enums.DataGridViewPresetThemes.DeepPurple,
                 AutoGenerateColumns = false,
-                EnableHeadersVisualStyles = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                GridColor = Color.FromArgb(230, 230, 240),
-                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
-                Margin = new Padding(0),
-
+                RowTemplate = { Height = 45 }
             };
 
-            //MessageBox.Show(GetAuthToken());
-
-            // --- HEADER STYLING (FIXES WHITE STRIP) ---
-            dgvSessions.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-            dgvSessions.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
-            {
-                BackColor = BrandPrimary,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 11, FontStyle.Bold),
-                Alignment = DataGridViewContentAlignment.MiddleCenter,
-                Padding = new Padding(0, 6, 0, 6),
-
-            };
-            dgvSessions.ColumnHeadersHeight = 50;
-
-            dgvSessions.DefaultCellStyle = new DataGridViewCellStyle
-            {
-                BackColor = Color.White,
-                ForeColor = Color.Black,
-                Font = new Font("Segoe UI", 10),
-                SelectionBackColor = Color.FromArgb(230, 240, 255),
-                SelectionForeColor = Color.Black,
-                Alignment = DataGridViewContentAlignment.MiddleCenter
-            };
-            dgvSessions.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 253);
-            dgvSessions.RowTemplate.Height = 44;
-
-            // --- APPLY GUNA THEME FIX ---
-            dgvSessions.ThemeStyle.BackColor = Color.White;
-            dgvSessions.ThemeStyle.GridColor = Color.FromArgb(230, 230, 240);
-            dgvSessions.ThemeStyle.HeaderStyle.BackColor = BrandPrimary;
+            dgvSessions.ThemeStyle.HeaderStyle.Font = new Font("Segoe UI", 13, FontStyle.Bold);
             dgvSessions.ThemeStyle.HeaderStyle.ForeColor = Color.White;
+            dgvSessions.ThemeStyle.HeaderStyle.BackColor = BrandPrimary;
+            dgvSessions.ThemeStyle.HeaderStyle.HeaightSizeMode = DataGridViewColumnHeadersHeightSizeMode.EnableResizing;
+            dgvSessions.ColumnHeadersHeight = 55;
+            dgvSessions.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            dgvSessions.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvSessions.DefaultCellStyle.Font = new Font("Segoe UI", 12, FontStyle.Regular);
+            dgvSessions.ThemeStyle.RowsStyle.Font = new Font("Segoe UI", 12);
             dgvSessions.ThemeStyle.RowsStyle.BackColor = Color.White;
-            dgvSessions.ThemeStyle.AlternatingRowsStyle.BackColor = Color.FromArgb(248, 250, 253);
+            dgvSessions.ThemeStyle.RowsStyle.ForeColor = Color.Black;
+            dgvSessions.ThemeStyle.RowsStyle.SelectionBackColor = Color.LightBlue;
 
-            // --- COLUMNS ---
-            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Channel", DataPropertyName = "Channel", FillWeight = 25 });
-            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Start Time", DataPropertyName = "StartTime", FillWeight = 25 });
-            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "End Time", DataPropertyName = "EndTime", FillWeight = 25 });
-            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Session State", DataPropertyName = "SessionState", FillWeight = 15 });
-            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Actions", ReadOnly = true, FillWeight = 10 });
+            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "SessionId", DataPropertyName = "SaleSessionId" });
+            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Channel", DataPropertyName = "Channel" });
+            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Start Time", DataPropertyName = "StartTime" });
+            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "End Time", DataPropertyName = "EndTime" });
+            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Session State", DataPropertyName = "SessionState" });
+            dgvSessions.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Actions" });
 
-            actionColumnIndex = dgvSessions.Columns["Actions"]?.Index ?? dgvSessions.Columns.Count - 1;
             dgvSessions.DataSource = visibleSessions;
+            actionColumnIndex = dgvSessions.Columns.Count - 1;
 
-            // --- EVENTS ---
             dgvSessions.CellPainting += DgvSessions_CellPainting;
             dgvSessions.CellMouseClick += DgvSessions_CellMouseClick;
             dgvSessions.CellMouseMove += DgvSessions_CellMouseMove;
             dgvSessions.CellMouseLeave += DgvSessions_CellMouseLeave;
 
-            // --- ADD TO ROOT ---
-            root.Controls.Add(topPanel, 0, 0);
-            root.Controls.Add(actionPanel, 0, 1);
-            root.Controls.Add(dgvSessions, 0, 2);
-            Controls.Add(root);
+            // === Add Controls ===
+            this.Controls.Add(dgvSessions);
+            this.Controls.Add(actionPanel);
+            this.Controls.Add(topPanel);
         }
 
         private Guna2Button CreateButton(string text, Color color, EventHandler onClick)
@@ -267,39 +219,45 @@ namespace MyApp.UI.Forms
                 BorderRadius = 8,
                 FillColor = color,
                 ForeColor = Color.White,
-                Height = 40,
-                Margin = new Padding(0, 0, 10, 0),
-                Padding = new Padding(14, 0, 14, 0)
+                Margin = new Padding(6)
             };
             btn.Click += onClick;
             return btn;
         }
 
-        // ================== DATA LOAD ==================
         private async Task LoadSessionsAsync()
         {
+            if (_authHeader == null)
+            {
+                return;
+
+            }
             try
             {
                 using var client = new HttpClient();
-                client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("Authorization", _authHeader);
+                var url = $"{AppConfig.BaseApiUrl}l2a/sales/sale-sessions/GetAll?PerPage=20&Page=0";
 
-                var url = "https://dots.optimuzai.com/api/l2a/sales/sale-sessions/GetAll?PerPage=20&Page=0";
                 var response = await client.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 var json = await response.Content.ReadAsStringAsync();
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse>(json, options);
+
+
+
+                //MessageBox.Show(json);
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                SystemConfigRepository.SaveConfig("SaleSessions", apiResponse);
 
                 allSessions.Clear();
-
                 if (apiResponse?.Data?.Records != null)
                 {
                     foreach (var rec in apiResponse.Data.Records)
                     {
                         allSessions.Add(new SaleSessionView
                         {
+                            SaleSessionId = rec.SaleSessionId,
                             Channel = rec.SaleChannel?.SaleChannelName ?? "N/A",
                             StartTime = UnixToDate(rec.StartTime),
                             EndTime = rec.EndTime.HasValue ? UnixToDate(rec.EndTime.Value) : "N/A",
@@ -312,7 +270,32 @@ namespace MyApp.UI.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string json = SystemConfigRepository.GetConfig("SaleSessions");
+
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                SystemConfigRepository.SaveConfig("SaleSessions", apiResponse);
+
+                allSessions.Clear();
+                if (apiResponse?.Data?.Records != null)
+                {
+                    foreach (var rec in apiResponse.Data.Records)
+                    {
+                        allSessions.Add(new SaleSessionView
+                        {
+                            SaleSessionId = rec.SaleSessionId,
+                            Channel = rec.SaleChannel?.SaleChannelName ?? "N/A",
+                            StartTime = UnixToDate(rec.StartTime),
+                            EndTime = rec.EndTime.HasValue ? UnixToDate(rec.EndTime.Value) : "N/A",
+                            SessionState = rec.SessionState
+                        });
+                    }
+                }
+
+                ResetVisibleSessions(allSessions);
+
+                if (allSessions == null)
+                { MessageBox.Show($"Failed to load data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
         }
 
@@ -332,26 +315,27 @@ namespace MyApp.UI.Forms
             visibleSessions.ResetBindings();
         }
 
-        private async void BtnRefresh_Click(object? sender, EventArgs e) => await LoadSessionsAsync();
-
         private void BtnSearch_Click(object? sender, EventArgs e)
         {
-            string q = (txtSearch.Text ?? "").Trim();
+            string q = txtSearch.Text?.Trim() ?? "";
             if (string.IsNullOrEmpty(q))
             {
                 ResetVisibleSessions(allSessions);
                 return;
             }
 
-            var filtered = allSessions
-                .Where(s => (s.Channel ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            (s.SessionState ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
-                .ToList();
-
+            var filtered = allSessions.FindAll(s =>
+                (s.Channel ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (s.SessionState ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0);
             ResetVisibleSessions(filtered);
         }
 
         private void BtnAdd_Click(object? sender, EventArgs e)
+        {
+            MessageBox.Show("Select Customer clicked!");
+        }
+
+        private void BtnLogout_Click(object? sender, EventArgs e)
         {
             RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\MyCompany\MyApp", true);
             if (key != null)
@@ -359,8 +343,8 @@ namespace MyApp.UI.Forms
                 key.DeleteValue("AuthToken", false);
                 key.Close();
             }
-            this.Tag = "SignOut"; // handled by AppContext
-            this.Close(); // close after showing (to trigger AppContext)
+            this.Tag = "SignOut";
+            this.Close();
         }
 
         // ================== GRID BUTTONS ==================
@@ -369,138 +353,169 @@ namespace MyApp.UI.Forms
             if (e.RowIndex < 0 || e.ColumnIndex != actionColumnIndex) return;
 
             e.PaintBackground(e.CellBounds, true);
-            var rects = GetActionButtonRects(e.CellBounds);
+            var (resumeRect, deleteRect) = GetActionButtonRects(e.CellBounds);
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            bool isHovered = e.RowIndex == hoverRowIndex;
-            var resumeColor = isHovered && hoverPart == ActionButtonPart.Resume ? Lighten(BrandSuccess, 0.1f) : BrandSuccess;
-            var deleteColor = isHovered && hoverPart == ActionButtonPart.Delete ? Lighten(BrandDanger, 0.08f) : BrandDanger;
+            var resumeBrush = new SolidBrush(BrandSuccess);
+            var deleteBrush = new SolidBrush(BrandDanger);
+            var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
 
-            using var resumeBrush = new SolidBrush(resumeColor);
-            using var deleteBrush = new SolidBrush(deleteColor);
-            using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            g.FillRoundedRectangle(resumeBrush, resumeRect, 8);
+            g.DrawString("Resume", e.CellStyle.Font, Brushes.White, resumeRect, sf);
 
-            g.FillRoundedRectangle(resumeBrush, rects.Item1, 8);
-            g.DrawString("Resume", e.CellStyle.Font, Brushes.White, rects.Item1, sf);
-            g.FillRoundedRectangle(deleteBrush, rects.Item2, 8);
-            g.DrawString("Delete", e.CellStyle.Font, Brushes.White, rects.Item2, sf);
+            g.FillRoundedRectangle(deleteBrush, deleteRect, 8);
+            g.DrawString("Delete", e.CellStyle.Font, Brushes.White, deleteRect, sf);
 
             e.Handled = true;
         }
 
-        private void DgvSessions_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+        async private void DgvSessions_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
         {
-            //Object obj = Null;
             if (e.RowIndex < 0 || e.ColumnIndex != actionColumnIndex) return;
-            //MessageBox.Show("Action button clicked!  1 ");
-            SaleScreenForm saleScreen = new SaleScreenForm();
-            this.Hide();
-            saleScreen.Show();
 
+            int buttonWidth = dgvSessions.Columns[e.ColumnIndex].Width / 2;
+            var selectedSession = visibleSessions[e.RowIndex];
+
+            if (e.Location.X < buttonWidth)
+            {
+                await ResumeSessionAsync(selectedSession.SaleSessionId);
+            }
+            else
+            {
+                MessageBox.Show($"Delete clicked for row {e.RowIndex}");
+            }
         }
 
         private void DgvSessions_CellMouseMove(object? sender, DataGridViewCellMouseEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex != actionColumnIndex)
             {
-                // hoverRowIndex = -1;
-                hoverPart = ActionButtonPart.None;
                 dgvSessions.Cursor = Cursors.Default;
                 return;
             }
 
             Rectangle cellRect = dgvSessions.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, false);
             Point local = new Point(e.X - cellRect.X, e.Y - cellRect.Y);
-            var rects = GetActionButtonRects(new Rectangle(Point.Empty, cellRect.Size));
+            var (resumeRect, deleteRect) = GetActionButtonRects(new Rectangle(Point.Empty, cellRect.Size));
 
-            ActionButtonPart part = rects.Item1.Contains(local)
+            ActionButtonPart part = resumeRect.Contains(local)
                 ? ActionButtonPart.Resume
-                : rects.Item2.Contains(local)
+                : deleteRect.Contains(local)
                     ? ActionButtonPart.Delete
                     : ActionButtonPart.None;
 
-            if (hoverRowIndex != e.RowIndex || hoverPart != part)
-            {
-                hoverRowIndex = e.RowIndex;
-                hoverPart = part;
-                dgvSessions.Cursor = part == ActionButtonPart.None ? Cursors.Default : Cursors.Hand;
-                dgvSessions.Invalidate(cellRect);
-            }
-        }
-
-        public string GetAuthToken()
-        {
-            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\MyCompany\MyApp");
-            if (key != null)
-            {
-                var token_auth = key.GetValue("AuthToken") as string;
-                key.Close();
-                return token_auth;
-            }
-            return "null";
+            dgvSessions.Cursor = part == ActionButtonPart.None ? Cursors.Default : Cursors.Hand;
         }
 
         private void DgvSessions_CellMouseLeave(object? sender, DataGridViewCellEventArgs e)
         {
-            hoverRowIndex = -1;
-            hoverPart = ActionButtonPart.None;
             dgvSessions.Cursor = Cursors.Default;
         }
 
-        private static Tuple<Rectangle, Rectangle> GetActionButtonRects(Rectangle cellBounds)
+        private static (Rectangle, Rectangle) GetActionButtonRects(Rectangle cellBounds)
         {
-            const int padding = 6, gap = 8;
+            int padding = 6, gap = 8;
             int h = cellBounds.Height - (padding * 2);
             int w = (cellBounds.Width - (padding * 2) - gap) / 2;
             var rect1 = new Rectangle(cellBounds.Left + padding, cellBounds.Top + padding, w, h);
             var rect2 = new Rectangle(rect1.Right + gap, cellBounds.Top + padding, w, h);
-            return Tuple.Create(rect1, rect2);
+            return (rect1, rect2);
         }
 
-        private static Color Lighten(Color c, float a)
+        private static string GetAuthToken()
         {
-            int r = c.R + (int)((255 - c.R) * a);
-            int g = c.G + (int)((255 - c.G) * a);
-            int b = c.B + (int)((255 - c.B) * a);
-            return Color.FromArgb(r, g, b);
-        }
-
-        // ================== MODELS ==================
-        private class ApiResponse { public ApiData? Data { get; set; } }
-        private class ApiData { public List<SaleSessionRecord>? Records { get; set; } }
-        private class SaleSessionRecord
-        {
-            public string SaleSessionId { get; set; } = "";
-            public long StartTime { get; set; }
-            public long? EndTime { get; set; }
-            public string SessionState { get; set; } = "";
-            public SaleChannel? SaleChannel { get; set; }
-        }
-        private class SaleChannel { public string SaleChannelName { get; set; } = ""; }
-        private sealed class SaleSessionView
-        {
-            public string Channel { get; set; } = "";
-            public string StartTime { get; set; } = "";
-            public string EndTime { get; set; } = "";
-            public string SessionState { get; set; } = "";
-        }
-    }
-
-    // Rounded Rectangle Extension
-    public static class GraphicsExtensions
-    {
-        public static void FillRoundedRectangle(this Graphics g, Brush brush, Rectangle bounds, int radius)
-        {
-            using (GraphicsPath path = new GraphicsPath())
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\MyCompany\MyApp");
+            if (key != null)
             {
-                path.AddArc(bounds.Left, bounds.Top, radius, radius, 180, 90);
-                path.AddArc(bounds.Right - radius, bounds.Top, radius, radius, 270, 90);
-                path.AddArc(bounds.Right - radius, bounds.Bottom - radius, radius, radius, 0, 90);
-                path.AddArc(bounds.Left, bounds.Bottom - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-                g.FillPath(brush, path);
+                var token = key.GetValue("AuthToken") as string;
+                key.Close();
+                return token ?? "null";
             }
+            return "null";
         }
+
+        private async Task ResumeSessionAsync(string saleSessionId)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Authorization", _authHeader);
+
+                string url = $"{AppConfig.BaseApiUrl}pos/sessions/ResumeSession";
+
+                // ✅ Payload with the session ID
+                var payload = new
+                {
+                    SaleSessionId = saleSessionId
+                };
+
+                string jsonPayload = JsonSerializer.Serialize(payload);
+                var content = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+
+                // ✅ Send POST request
+                var response = await client.PostAsync(url, content);
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    MessageBox.Show($"Resume failed ({response.StatusCode}):\n{responseBody}",
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // ✅ Parse and save API response
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse_ResumeSession>(responseBody,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (apiResponse?.Data != null)
+                {
+                    var extendedData = new
+                    {
+                        SaleSessionId = saleSessionId,
+                        apiResponse?.Data.Pk,
+                        apiResponse?.Data.PosToken,
+                    };
+
+                    // ✅ Serialize and save to database
+                    SystemConfigRepository.SaveConfig("LastResumedSession", extendedData);
+
+                    SystemConfigRepository.SaveConfig("SaleSessionId", saleSessionId);
+                    SystemConfigRepository.SaveConfig("PosToken", apiResponse?.Data.PosToken);
+
+                    // ✅ Navigate to SaleScreenForm
+                    this.Tag = "Sale";
+                    this.Close();
+                    return;
+                }
+                else
+                {
+                    MessageBox.Show("Not allowed to resume this session.",
+                        "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                string data = SystemConfigRepository.GetConfig("LastResumedSession");
+
+                var resumeData = JsonSerializer.Deserialize<ResumeData>(data, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (resumeData != null)
+                {
+                    if (resumeData.SaleSessionId == saleSessionId)
+                    {
+                        this.Tag = "Sale";
+                        this.Close();
+                        return;
+                    }
+                }
+
+                MessageBox.Show($"Error while resuming session:\n{ex.Message}",
+                    "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+        }
+
     }
+
 }

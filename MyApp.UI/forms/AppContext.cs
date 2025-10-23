@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using MyApp.UI.Forms;
+using MyApp.UI.Data;
 
 namespace MyApp.UI
 {
@@ -8,6 +9,7 @@ namespace MyApp.UI
     {
         public AppContext()
         {
+            DatabaseHelper.Initialize(); // Ensure DB is ready
             ShowDashboard(); // ✅ Start with Dashboard
         }
 

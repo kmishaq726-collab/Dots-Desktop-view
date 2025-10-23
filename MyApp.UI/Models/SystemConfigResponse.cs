@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MyApp.UI.Models
+namespace MyApp.Models
 {
     public class Profile
     {

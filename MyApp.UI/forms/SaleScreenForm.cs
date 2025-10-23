@@ -1,256 +1,269 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
+using Microsoft.Win32;
+using MyApp.Common;
+using MyApp.Models;
+using MyApp.UI.Controls;
+using MyApp.UI.Data;
+using static MyApp.UI.Services.PinnedProductsService;
 
 namespace MyApp.UI.Forms
 {
     public class SaleScreenForm : Form
     {
-        private SplitContainer mainSplit;
-
-        // Left side controls
-        private Guna2TextBox txtSearch;
-        private FlowLayoutPanel cartItemsPanel;
-        private Label lblNetTotal;
-        private Label lblTotal;
-        private Label lblDiscount;
-        private Label lblChange;
-
-        // Quick Amount Buttons
-        private FlowLayoutPanel quickAmountPanel;
-        private Guna2Button btnToggleSign;
-        private bool isPositive = true;   // track + / -
-
-        // Right side controls
         private FlowLayoutPanel saleTabsPanel;
-        private FlowLayoutPanel paymentMethodsPanel;
-        private FlowLayoutPanel pinnedItemsPanel;
-        private FlowLayoutPanel actionButtonsPanel;
+        private Panel tabContentHost;
+        private Guna2Button btnAddTab, btnRemoveTab;
+        private readonly List<Guna2Button> activeTabs = new();
+        private readonly Dictionary<Guna2Button, SaleTabControl> tabContents = new();
+        private const int MaxTabs = 5;
 
         public SaleScreenForm()
         {
-            InitializeComponent();
+            InitializeUI();
+            GetPosToken();
+            GetPinnedProducts();
+        }
+        
+        private void GetPinnedProducts()
+        {
+           string getPinnedProduct = SystemConfigRepository.GetConfig("_pinnedProducts");
+            if (getPinnedProduct != null)
+            {
+                var pinnedProduct = JsonSerializer.Deserialize<List<PinnedProduct>>(getPinnedProduct, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                PinSavedProducts(pinnedProduct);
+            } 
         }
 
-        private void InitializeComponent()
+        private async Task InitializeUI()
         {
-            this.Text = "POS Sale Screen";
-            this.WindowState = FormWindowState.Maximized;
-            this.BackColor = Color.White;
+        
+            await SaveSaleSessionInfo();
+            Text = "POS Sale Screen";
+            WindowState = FormWindowState.Maximized;
+            BackColor = Color.White;
+            MinimumSize = new Size(1200, 700);
 
-            // === Split Layout ===
-            mainSplit = new SplitContainer
+            // ----- Main Layout -----
+            var layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                BorderStyle = BorderStyle.FixedSingle,
-                SplitterWidth = 6,
-                IsSplitterFixed = false
+                ColumnCount = 1,
+                RowCount = 2
             };
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 55));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            Controls.Add(layout);
 
-            // Split 50/50 when form loads
-            this.Load += (s, e) =>
-            {
-                mainSplit.SplitterDistance = this.ClientSize.Width / 2;
-            };
-
-            this.Controls.Add(mainSplit);
-
-            // === LEFT PANEL ===
-            var leftPanel = mainSplit.Panel1;
-            leftPanel.BackColor = Color.White;
-
-            // Search bar
-            txtSearch = new Guna2TextBox
-            {
-                PlaceholderText = "Search by barcode",
-                Dock = DockStyle.Top,
-                Height = 40,
-                BorderRadius = 6,
-                Margin = new Padding(5)
-            };
-            leftPanel.Controls.Add(txtSearch);
-
-            // Cart Items area
-            cartItemsPanel = new FlowLayoutPanel
+            // ----- Tabs Header Bar -----
+            var headerPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                AutoScroll = true,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(10)
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(10, 8, 10, 8)
             };
-            leftPanel.Controls.Add(cartItemsPanel);
+            layout.Controls.Add(headerPanel, 0, 0);
 
-            // === Quick Amount Buttons ===
-            quickAmountPanel = new FlowLayoutPanel
+            // container that holds tabs (left) and control buttons (right)
+            var headerLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Bottom,
-                Height = 50,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.WhiteSmoke,
-                Padding = new Padding(10),
-                WrapContents = false,
-                AutoScroll = true
+                Dock = DockStyle.Fill,
+                ColumnCount = 2
             };
+            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            headerPanel.Controls.Add(headerLayout);
 
-            // +/- button with event
-            btnToggleSign = MakeQuickButton("+/-");
-            btnToggleSign.Click += ToggleQuickButtons;
-            quickAmountPanel.Controls.Add(btnToggleSign);
-
-            // other quick buttons
-            quickAmountPanel.Controls.Add(MakeQuickButton("+50"));
-            quickAmountPanel.Controls.Add(MakeQuickButton("+100"));
-            quickAmountPanel.Controls.Add(MakeQuickButton("+500"));
-            quickAmountPanel.Controls.Add(MakeQuickButton("+1000"));
-            quickAmountPanel.Controls.Add(MakeQuickButton("+5000"));
-
-            leftPanel.Controls.Add(quickAmountPanel);
-
-            // === Totals area ===
-            var totalsPanel = new TableLayoutPanel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 120,
-                ColumnCount = 4,
-                RowCount = 1,
-                BackColor = Color.WhiteSmoke
-            };
-            totalsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-            totalsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-            totalsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-            totalsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-
-            lblNetTotal = MakeLabel("Net Total: 0");
-            lblTotal = MakeLabel("Total: 0");
-            lblDiscount = MakeLabel("Discount: 0");
-            lblChange = MakeLabel("Change: 0");
-
-            totalsPanel.Controls.Add(lblNetTotal, 0, 0);
-            totalsPanel.Controls.Add(lblTotal, 1, 0);
-            totalsPanel.Controls.Add(lblDiscount, 2, 0);
-            totalsPanel.Controls.Add(lblChange, 3, 0);
-
-            leftPanel.Controls.Add(totalsPanel);
-
-            // === RIGHT PANEL ===
-            var rightPanel = mainSplit.Panel2;
-            rightPanel.BackColor = Color.White;
-
-            // Tabs (sales tabs)
+            // ----- Tabs Panel (Left) -----
             saleTabsPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Top,
-                Height = 40,
-                BackColor = Color.AliceBlue
-            };
-            rightPanel.Controls.Add(saleTabsPanel);
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoScroll = true,
+                Padding = new Padding(0),
+                BackColor = Color.Transparent,
+                Margin = new Padding(0),
 
-            // Payment methods row
-            paymentMethodsPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                Height = 40,
-                BackColor = Color.WhiteSmoke
             };
-            rightPanel.Controls.Add(paymentMethodsPanel);
+            headerLayout.Controls.Add(saleTabsPanel, 0, 0);
 
-            // Pinned items area
-            pinnedItemsPanel = new FlowLayoutPanel
+            // ----- Control Buttons (Right) -----
+            var controlButtonsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                AutoScroll = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoSize = true,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
+            };
+
+            btnAddTab = MakeControlButton("+", AddNewTab, Color.SeaGreen);
+            btnRemoveTab = MakeControlButton("−", RemoveActiveTab, Color.Crimson);
+            controlButtonsPanel.Controls.AddRange(new Control[] { btnAddTab, btnRemoveTab });
+            headerLayout.Controls.Add(controlButtonsPanel, 1, 0);
+
+
+            // ----- Tab Content Host (Main Area) -----
+            tabContentHost = new Panel
+            {
+                Dock = DockStyle.Fill,
                 BackColor = Color.White
             };
-            rightPanel.Controls.Add(pinnedItemsPanel);
+            layout.Controls.Add(tabContentHost, 0, 1);
 
-            // Action buttons row (bottom)
-            actionButtonsPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 60,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.WhiteSmoke,
-                Padding = new Padding(10)
-            };
-
-            // === Back Button ===
-            var btnBack = MakeButton("Back");
-            btnBack.Click += (s, e) =>
-            {
-                //this.Hide();
-                //Dashboard dashboard = new Dashboard();
-                //dashboard.Show();
-            };
-
-            var btnCustomer = MakeButton("Select Customer");
-            var btnNotes = MakeButton("Notes");
-            var btnHelp = MakeButton("Help");
-            var btnPostSale = MakeButton("Post Sale");
-
-            actionButtonsPanel.Controls.Add(btnBack);
-            actionButtonsPanel.Controls.Add(btnCustomer);
-            actionButtonsPanel.Controls.Add(btnNotes);
-            actionButtonsPanel.Controls.Add(btnHelp);
-            actionButtonsPanel.Controls.Add(btnPostSale);
-
-            rightPanel.Controls.Add(actionButtonsPanel);
+            // Start with one tab
+            AddNewTab(null, null);
         }
 
-        // === Toggle Event ===
-        private void ToggleQuickButtons(object sender, EventArgs e)
+        // ---------------- TAB MANAGEMENT ---------------- //
+        private void AddNewTab(object? sender, EventArgs? e)
         {
-            isPositive = !isPositive; // switch mode
-
-            foreach (var ctrl in quickAmountPanel.Controls)
+            if (activeTabs.Count >= MaxTabs)
             {
-                if (ctrl is Guna2Button btn && btn != btnToggleSign)
-                {
-                    string value = btn.Text.TrimStart('+', '-');
-                    btn.Text = (isPositive ? "+" : "-") + value;
-                }
+                MessageBox.Show("Maximum 5 tabs allowed.", "Info");
+                return;
+            }
+
+            int newIndex = activeTabs.Count + 1;
+            var tab = new Guna2Button
+            {
+                Text = $"Tab {newIndex}",
+                Width = 120,
+                Height = 35,
+                BorderRadius = 8,
+                FillColor = Color.FromArgb(72, 118, 255),
+                HoverState = { FillColor = Color.FromArgb(50, 90, 230) },
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Margin = new Padding(5, 0, 5, 0),
+                ShadowDecoration = { Enabled = true, Shadow = new Padding(2) }
+            };
+            tab.Click += (s, ev) => ActivateTab(tab);
+            saleTabsPanel.Controls.Add(tab);
+            activeTabs.Add(tab);
+
+            var saleTab = new SaleTabControl();
+            tabContents[tab] = saleTab;
+
+            ActivateTab(tab);
+        }
+
+        private void RemoveActiveTab(object? sender, EventArgs? e)
+        {
+            if (activeTabs.Count <= 1)
+            {
+                MessageBox.Show("At least one tab must remain open.", "Info");
+                return;
+            }
+
+            var active = activeTabs.FirstOrDefault(t => t.FillColor == Color.DodgerBlue);
+            if (active != null)
+            {
+                saleTabsPanel.Controls.Remove(active);
+                activeTabs.Remove(active);
+                tabContents.Remove(active);
+
+                if (activeTabs.Any())
+                    ActivateTab(activeTabs.Last());
             }
         }
 
-        private Label MakeLabel(string text)
+        private void ActivateTab(Guna2Button tab)
         {
-            return new Label
-            {
-                Text = text,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter
-            };
+            foreach (var t in activeTabs)
+                t.FillColor = Color.FromArgb(72, 118, 255);
+
+            tab.FillColor = Color.DodgerBlue;
+
+            tabContentHost.Controls.Clear();
+            tabContentHost.Controls.Add(tabContents[tab]);
         }
 
-        private Guna2Button MakeButton(string text)
+        // ---------------- BUTTON STYLE HELPER ---------------- //
+        private Guna2Button MakeControlButton(string text, EventHandler click, Color baseColor)
         {
-            return new Guna2Button
+            var btn = new Guna2Button
             {
                 Text = text,
-                AutoSize = true,
-                BorderRadius = 8,
-                FillColor = Color.FromArgb(72, 118, 255),
-                ForeColor = Color.White,
+                Width = 60,
+                Height = 33,
+                BorderRadius = 10,
+                FillColor = baseColor,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Margin = new Padding(5)
+                ForeColor = Color.White,
+                Margin = new Padding(5, 0, 0, 0),
+                ShadowDecoration = { Enabled = true, Shadow = new Padding(2) }
             };
+
+            btn.HoverState.FillColor = ControlPaint.Light(baseColor, 0.2f);
+            btn.Click += click;
+            return btn;
         }
 
-        private Guna2Button MakeQuickButton(string text)
+        private static string GetPosToken()
         {
-            return new Guna2Button
+            string posToken = SystemConfigRepository.GetConfig("LastResumedSession");
+
+            var tokenData = JsonSerializer.Deserialize<ResumeData>(posToken, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return tokenData?.PosToken ?? "null";
+        }
+        private static string GetAuthToken()
+        {
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\MyCompany\MyApp");
+            if (key != null)
             {
-                Text = text,
-                Width = 95,
-                Height = 35,
-                BorderRadius = 6,
-                FillColor = Color.DimGray,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Margin = new Padding(5)
-            };
+                var token = key.GetValue("AuthToken") as string;
+                key.Close();
+                return token ?? "null";
+            }
+            return "null";
+        }
+
+        private async Task SaveSaleSessionInfo()
+        {
+            string _authHeader = GetAuthToken();
+            string _posToken = GetPosToken();
+
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Authorization", _authHeader);
+                client.DefaultRequestHeaders.Add("X-PosToken", _posToken);
+
+                string url = $"{AppConfig.BaseApiUrl}pos/sales/SaleSessionInfo";
+
+                var content = new StringContent("", System.Text.Encoding.UTF8, "application/json");
+
+                // ✅ Send POST request
+                var response = await client.PostAsync(url, content);
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    MessageBox.Show($"Resume failed ({response.StatusCode}):\n{responseBody}",
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // ✅ Parse and save API response
+                var apiResponse = JsonSerializer.Deserialize<SaleSessionInfo>(responseBody,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                SystemConfigRepository.SaveConfig("SaleSessionInfo", apiResponse);
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving sale session info: {ex.Message}");
+            }
         }
     }
 }
