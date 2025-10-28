@@ -115,4 +115,13 @@ namespace MyApp.Models
         public long DateCreated { get; set; }
         public long DateUpdated { get; set; }
     }
+
+    public class SaleItem
+    {
+        public string Name { get; set; }
+        public decimal Rate { get; set; }
+        public int Qty { get; set; }
+        public decimal Amount => Rate * Qty;
+        public string? CostCenterProductId { get; set; }
+    }
 }

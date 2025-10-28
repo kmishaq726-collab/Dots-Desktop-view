@@ -1,7 +1,7 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.UI\\MyApp.UI.csproj": {}
+    "D:\\Dot-Desktop-View\\DotDesktopApp\\myapp.ui\\MyApp.UI.csproj": {}
   },
   "projects": {
     "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.Common\\MyApp.Common.csproj": {
@@ -138,14 +138,14 @@
         }
       }
     },
-    "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.UI\\MyApp.UI.csproj": {
+    "D:\\Dot-Desktop-View\\DotDesktopApp\\myapp.ui\\MyApp.UI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.UI\\MyApp.UI.csproj",
+        "projectUniqueName": "D:\\Dot-Desktop-View\\DotDesktopApp\\myapp.ui\\MyApp.UI.csproj",
         "projectName": "MyApp.UI",
-        "projectPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.UI\\MyApp.UI.csproj",
+        "projectPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\myapp.ui\\MyApp.UI.csproj",
         "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\MyApp.UI\\obj\\",
+        "outputPath": "D:\\Dot-Desktop-View\\DotDesktopApp\\myapp.ui\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -198,6 +198,10 @@
             "Microsoft.Data.Sqlite": {
               "target": "Package",
               "version": "[9.0.9, )"
+            },
+            "QRCoder": {
+              "target": "Package",
+              "version": "[1.7.0, )"
             },
             "System.Data.SQLite.Core": {
               "target": "Package",

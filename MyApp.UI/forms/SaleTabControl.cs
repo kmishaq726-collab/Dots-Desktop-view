@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
 using Microsoft.VisualBasic;
@@ -12,6 +14,7 @@ using MyApp.Models;
 using MyApp.UI.Data;
 using MyApp.UI.Forms;
 using MyApp.UI.Services;
+using POSPrinting;
 using SQLitePCL;
 
 namespace MyApp.UI.Controls
@@ -27,7 +30,7 @@ namespace MyApp.UI.Controls
         private PaymentMethod selectedPaymentMethod { get; set; } = new PaymentMethod();
         private bool isPositive = true;
 
-        private static  System.Text.Json.JsonSerializerOptions jsonHelper = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        private static System.Text.Json.JsonSerializerOptions jsonHelper = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
         // UI Controls - Left Panel
         private SplitContainer mainSplit;
@@ -46,6 +49,7 @@ namespace MyApp.UI.Controls
         // Button References
         private Guna2Button btnSelectProduct;
         private Guna2Button btnSelectCustomer;
+        private Guna2Button btnNote;
         private Guna2Button btnPostSale;
         private Guna2Button btnHelp;
         private Guna2Button btnCash;
@@ -454,10 +458,11 @@ namespace MyApp.UI.Controls
                 BackColor = Color.WhiteSmoke
             };
 
-            btnSelectProduct = MakeButton("Select Product", SelectProductClick);
-            btnSelectCustomer = MakeButton("Select Customer", SelectCustomerClick);
-            btnPostSale = MakeButton("Post Sale", PostSaleClick);
-            btnHelp = MakeButton("Help", HelpClick);
+            btnSelectProduct = MakeButton("🛒 Product", SelectProductClick);
+            btnSelectCustomer = MakeButton("👥 Customer", SelectCustomerClick);
+            btnPostSale = MakeButton("💾 Post Sale", PostSaleClick);
+            btnHelp = MakeButton("❓ Help", HelpClick);
+            btnNote = MakeButton("📝 Note", null);
 
             btnPostSale.AutoSize = false;
             btnPostSale.Size = new Size(150, 45);
@@ -473,6 +478,8 @@ namespace MyApp.UI.Controls
 
             actionButtonsPanel.Controls.Add(btnSelectProduct);
             actionButtonsPanel.Controls.Add(btnSelectCustomer);
+            actionButtonsPanel.Controls.Add(btnNote);
+
             actionButtonsPanel.Controls.Add(btnHelp);
             actionButtonsPanel.Controls.Add(spacerPanel);
             actionButtonsPanel.Controls.Add(btnPostSale);
@@ -655,6 +662,8 @@ namespace MyApp.UI.Controls
             if (!ValidateCashInput())
                 return;
 
+
+
             ProcessSalePosting();
         }
 
@@ -811,9 +820,9 @@ namespace MyApp.UI.Controls
             // === Add all controls ===
             itemPanel.Controls.AddRange(new Control[]
             {
-        btnName, lblPrice, numQty,
-        btnPin, btnRemove,
-        lblDiscount, lblCalculation, lblTotal
+            btnName, lblPrice, numQty,
+            btnPin, btnRemove,
+            lblDiscount, lblCalculation, lblTotal
             });
 
             // ✅ Adjust right-aligned buttons when resized
@@ -1074,7 +1083,7 @@ namespace MyApp.UI.Controls
 
         private bool ValidateCashInput()
         {
-            if (string.IsNullOrEmpty(txtCash.Text) || !decimal.TryParse(txtCash.Text, out decimal cash) || cash < netTotal)
+            if (cartItemsPanel.Controls.Count <= 0)
             {
                 MessageBox.Show("Please enter sufficient cash amount.", "POS",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1084,18 +1093,46 @@ namespace MyApp.UI.Controls
             return true;
         }
 
-        public void PutSaleData()
+        public async Task PutSaleData()
         {
             string SaleSessionId = SystemConfigRepository.GetConfig("SaleSessionId");
 
+            string Data = SystemConfigRepository.GetConfig("SaleSessionInfo");
+            var ProductInfo = JsonSerializer.Deserialize<SaleSessionInfo>(Data, jsonHelper);
+            SaleSession saleSession = ProductInfo?.Data?.SaleSession;
+
+            MyApp.Models.PrintSettings? settings = ProductInfo?.Data?.PrintSettings;
             List<Product> productsInSale = GetProductsInCart();
-            string paymentMethod = selectedPaymentMethod.SalePaymentMethodId;
-            if(paymentMethod == null)
+            string PaymentMethod = ProductInfo?.Data?.PaymentMethods?[0].SalePaymentMethodId;
+
+            SalePaymentMethod paymentMethod = new SalePaymentMethod();
+            paymentMethod.SalePaymentMethodId = selectedPaymentMethod.SalePaymentMethodId == null ? PaymentMethod : selectedPaymentMethod.SalePaymentMethodId;
+            paymentMethod.Amount = netTotal;
+
+            
+            #region CallingToFbr
+            bool isFbrIntegration = false;
+
+            string systemconfig = SystemConfigRepository.GetConfig("SystemConfig");
+            SystemConfigResponse costCenter = JsonSerializer.Deserialize<SystemConfigResponse>(systemconfig, jsonHelper);
+            CostCenterActive activeCenter = costCenter.Data.CostCenter.Active;
+            string fbrInvoiceNumber = null;
+            string qrDataUrl;
+
+            var fbr = new FbrResponse();
+
+            if (activeCenter.EnableFbrIntegration)
             {
-                string Data = SystemConfigRepository.GetConfig("SaleSessionInfo");
-                var ProductInfo = JsonSerializer.Deserialize<SaleSessionInfo>(Data, jsonHelper);
-                paymentMethod = ProductInfo.Data.PaymentMethods[0].SalePaymentMethodId;
+                var fbrService = new FbrService
+                {
+                    SaleSession = saleSession,
+                    ProductsMap = productsInSale.ToDictionary(p => p.CostCenterProductId)
+                };
+                fbr = await fbrService.PostToFbrAsync(productsInSale.ToList(), netTotal, Total, netDiscount);
+
+                fbrInvoiceNumber = fbr.FbrInvoiceNumber;
             }
+            
             var sale = new PosSale
             {
                 SaleSessionId = SaleSessionId ?? string.Empty,
@@ -1103,28 +1140,32 @@ namespace MyApp.UI.Controls
                 InvoiceDiscount = netDiscount,
                 InvoiceNet = netTotal,
                 CustomerId = customerid,
-                InvoiceDate = new DateTimeOffset(DateTime.Now).ToUnixTimeSeconds(), 
-                FbrInvoiceNumber = null,
+                InvoiceDate = new DateTimeOffset(DateTime.Now).ToUnixTimeSeconds(),
+                FbrInvoiceNumber = fbrInvoiceNumber,
                 SalePaymentMethods = new List<SalePaymentMethod>
-                {
-                    new SalePaymentMethod
                     {
-                        SalePaymentMethodId = paymentMethod,
-                        Amount = netTotal
-                    }
-                },
-                Items = productsInSale.Select(p => new Item
-                {
-                    CostCenterProductId = p.CostCenterProductId,
-                    ProductId = p.ProductId,
-                    ProductGroupId = p.ProductGroupId,
-                    ProductTypeId = p.ProductTypeId,
-                    ProductBrandId = p.ProductBrandId,
-                    UnitCount = p.Quantity,
-                    LineDiscount = (decimal)p.LineDiscount,
-                    UnitPrice = p.SalePrice
-                }).ToList()
+                        paymentMethod
+                    },
+                Items = productsInSale.ToList()
             };
+
+            #endregion
+
+            #region Print
+            var sales = new ReceiptPrinter.Sale
+            {
+                InvoiceAmount = Total,
+                InvoiceDiscount = netDiscount,
+                InvoiceNet = netTotal,
+                Items = GetInvoiceProducts()
+            };
+            
+
+            var printer = new ReceiptPrinter();
+
+            printer.PrintReceipt(settings, sales, fbr, activeCenter.EnableFbrIntegration, posId: "POS-01", ntn: "1234567-8", strn: "STRN-98765");
+            #endregion
+
 
             customerid = null;
             SystemConfigRepository.SavePostSale($"Sale{_NotSyncedTotal + 1}", sale);
@@ -1134,6 +1175,7 @@ namespace MyApp.UI.Controls
         {
             PutSaleData();
             PostSaleApiCall();
+
             _NotSyncedTotal = SystemConfigRepository.GetNotSyncedTotal();
 
             UpdateSyncButton();
@@ -1141,6 +1183,29 @@ namespace MyApp.UI.Controls
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             ClearCart();
+        }
+
+        private List<SaleItem> GetInvoiceProducts()
+        {
+            string Products = SystemConfigRepository.GetConfig("SaleSessionInfo");
+            var ProductInfo = JsonSerializer.Deserialize<SaleSessionInfo>(Products, jsonHelper);
+            List<SaleItem> productsInSale = new List<SaleItem>();
+            foreach (Panel existingItem in cartItemsPanel.Controls.OfType<Panel>())
+            {
+                var lbl = existingItem.Controls.OfType<Guna2Button>().FirstOrDefault(e => e.Name == "lblName");
+                var lblDis = existingItem.Controls.OfType<Label>().FirstOrDefault(e => e.Name == "lblDiscount");
+                var qty = existingItem.Controls.OfType<NumericUpDown>().FirstOrDefault();
+                var lblPrice = existingItem.Controls.OfType<Label>().FirstOrDefault(e => e.Name == "lblPrice");
+                Product p = ProductInfo.Data?.Products?.FirstOrDefault(pr => pr.ProductName == lbl?.Text);
+                SaleItem item = new SaleItem()
+                {
+                    Name = p.ProductName,
+                    Rate = decimal.Parse(lblPrice.Text),
+                    Qty = int.Parse(qty.Value.ToString())
+                };
+                productsInSale.Add(item);
+            }
+            return productsInSale;
         }
 
         private List<Product> GetProductsInCart()
@@ -1152,11 +1217,12 @@ namespace MyApp.UI.Controls
             {
                 var lbl = existingItem.Controls.OfType<Guna2Button>().FirstOrDefault(e => e.Name == "lblName");
                 var lblDis = existingItem.Controls.OfType<Label>().FirstOrDefault(e => e.Name == "lblDiscount");
+                var lblPrice = existingItem.Controls.OfType<Label>().FirstOrDefault(e => e.Name == "lblPrice");
                 var qty = existingItem.Controls.OfType<NumericUpDown>().FirstOrDefault();
                 Product p = ProductInfo.Data?.Products?.FirstOrDefault(pr => pr.ProductName == lbl?.Text);
                 p.Quantity = (int)qty.Value;
                 p.LineDiscount = double.Parse((lblDis.Text).Split(" ")[1]);
-                MessageBox.Show(p.LineDiscount.ToString());
+                p.SalePrice = decimal.Parse(lblPrice.Text);
                 productsInSale.Add(p);
             }
             return productsInSale;
@@ -1209,7 +1275,7 @@ namespace MyApp.UI.Controls
                 BorderRadius = 8,
                 FillColor = Color.FromArgb(72, 118, 255),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", btnSize, FontStyle.Bold),
+                Font = new Font("Segoe UI Emoji", btnSize, FontStyle.Bold),
                 Margin = new Padding(5)
             };
             if (onClick != null) btn.Click += onClick;
@@ -1343,13 +1409,10 @@ namespace MyApp.UI.Controls
         private void AttachEventHandlers(Guna2Button productButton, Guna2Button closeButton,
             string productName, decimal price)
         {
-            // Close button handler - clean and focused
             closeButton.Click += (s, e) => HandleProductUnpin(productName);
 
-            // Product button handler - optimized cart logic
             productButton.Click += (s, e) => HandleProductSelection(productName, price);
 
-            // Maintain close button positioning
             productButton.SizeChanged += (s, e) =>
                 PositionCloseButton(productButton, closeButton);
         }
@@ -1357,7 +1420,6 @@ namespace MyApp.UI.Controls
         private void HandleProductUnpin(string productName)
         {
             PinnedProductsService.UnpinProduct(productName);
-            // Optional: Add animation or visual feedback here
         }
 
         private void HandleProductSelection(string productName, decimal price)
@@ -1366,21 +1428,20 @@ namespace MyApp.UI.Controls
             {
                 AddProductToCart(productName, price);
             }
-            // Optional: Add selection feedback animation
         }
 
         private void PositionCloseButton(Guna2Button productButton, Guna2Button closeButton)
         {
             closeButton.Location = new Point(
                 productButton.Width - closeButton.Width - 5,
-                5 // Consistent 5px from top
+                5
             );
         }
 
         private void ComposeButtonControls(Guna2Button productButton, Guna2Button closeButton)
         {
             productButton.Controls.Add(closeButton);
-            PositionCloseButton(productButton, closeButton); // Initial positioning
+            PositionCloseButton(productButton, closeButton);
             pinnedItemsPanel.Controls.Add(productButton);
         }
         #endregion
@@ -1451,5 +1512,8 @@ namespace MyApp.UI.Controls
             return "null";
         }
         #endregion
+
     }
+
+
 }

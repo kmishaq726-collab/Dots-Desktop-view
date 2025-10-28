@@ -76,3 +76,5 @@ D:\Dot-Desktop-View\DotDesktopApp\MyApp.UI\bin\Debug\net8.0-windows\runtimes\win
 D:\Dot-Desktop-View\DotDesktopApp\MyApp.UI\bin\Debug\net8.0-windows\runtimes\win-arm64\native\e_sqlite3.dll
 D:\Dot-Desktop-View\DotDesktopApp\MyApp.UI\bin\Debug\net8.0-windows\runtimes\win-x64\native\e_sqlite3.dll
 D:\Dot-Desktop-View\DotDesktopApp\MyApp.UI\bin\Debug\net8.0-windows\runtimes\win-x86\native\e_sqlite3.dll
+D:\Dot-Desktop-View\DotDesktopApp\myapp.ui\bin\Debug\net8.0-windows\QRCoder.dll
+D:\Dot-Desktop-View\DotDesktopApp\myapp.ui\bin\Debug\net8.0-windows\assests\12.jpeg
